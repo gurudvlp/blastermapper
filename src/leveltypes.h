@@ -85,6 +85,7 @@ typedef struct
 	unsigned char thingtype;
 	unsigned char x;
 	unsigned char y;
+	GLuint texid;
 } Thing;
 
 typedef struct

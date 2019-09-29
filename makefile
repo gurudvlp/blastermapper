@@ -6,7 +6,8 @@ OBJ = src/main.c \
 	src/view_quadrant.c \
 	src/view_screen.c \
 	src/view_block.c \
-	src/levelinfo.c
+	src/levelinfo.c \
+	src/thing.c
 
 #	Any special libraries
 LIBS = -pthread -lX11 -lGL -lGLU -g -Wall
