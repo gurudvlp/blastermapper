@@ -4,10 +4,13 @@
 #include <GL/glx.h>
 #include <GL/glu.h>
 
-#include "leveltypes.h"
+
 
 #ifndef DEF_THING
 	#define DEF_THING 1
+	
+	#include "leveltypes.h"
+	
 	#define THING_MAX 512
 
 

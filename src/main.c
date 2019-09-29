@@ -43,6 +43,7 @@
 #include "view_screen.h"
 #include "view_block.h"
 #include "levelinfo.h"
+//#include "thing.h"
 
 void SetupXWindows();
 void SetupGL();
@@ -234,6 +235,7 @@ int main(int argc, char **argv)
 				//	v 55
 				//	+ 86
 				//	- 82
+				//	t 28
 				//	keyboard1 10,11,12...
 				if(xke->keycode == 9)
 				{
@@ -259,6 +261,12 @@ int main(int argc, char **argv)
 						
 						glXSwapBuffers(dpy, win);
 					}
+				}
+				
+				if(xke->keycode == 28)
+				{
+					//int cThing = thingFindAt(&Levels[editorLevel][editorMode], editorXSelect, editorYSelect);
+					//printf("Thing at %d %d == %d\n", editorXSelect, editorYSelect, cThing);
 				}
 				
 				if(xke->keycode == 113)
