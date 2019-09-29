@@ -116,3 +116,25 @@ void PrintSpawnPoints()
 			Levels[el][1].SpawnPoint.y);
 	}
 }
+
+//	GetThingAt is looking for the x and y coordinates of a sub block
+short GetThingAt(int lvl, int lvlmode, int x, int y)
+{
+	if(lvl < 0 || lvl > 7) { return -1; }
+	if(lvlmode < 0 || lvlmode > 1) { return -1; }
+	Level * level = (Level *)&Levels[lvl][lvlmode];
+	
+	printf("GetThingAt: Level: %d:%d, Coords: %d, %d\n", lvl, lvlmode, x, y);
+	
+	int et;
+	for(et = 0; et < 512; et++)
+	{
+		if(level->Things[et].x == (x & 0xFF)
+		&& level->Things[et].y == (y & 0xFF))
+		{
+			return et;
+		}
+	}
+	
+	return -1;
+}

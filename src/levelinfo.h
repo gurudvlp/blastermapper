@@ -12,6 +12,7 @@ void SetBlockAt(int lvl, int lvlmode, int x, int y, unsigned char blockid);
 unsigned char BlockClipboard;
 void SetSpawnPoint(int lvl, int lvlmode, int x, int y);
 void PrintSpawnPoints();
+short GetThingAt(int lvl, int lvlmode, int x, int y);
 
 GLuint darkenTextureID;
 GLuint spawnPointTextureID;

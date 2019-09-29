@@ -414,6 +414,37 @@ int main(int argc, char **argv)
 						RenderEditor();
 					}	
 					
+					if(xke->keycode == 28)
+					{
+						//	t, show things
+						/*printf("Thing 0,0: %d\n", GetThingAt(editorLevel, editorMode, selectedBlockX * 4, selectedBlockY * 4));
+						printf("Thing 1,0: %d\n", GetThingAt(editorLevel, editorMode, (selectedBlockX * 4) + 1, selectedBlockY * 4));
+						printf("Thing 0,1: %d\n", GetThingAt(editorLevel, editorMode, selectedBlockX * 4, (selectedBlockY * 4) + 1));
+						printf("Thing 1,1: %d\n", GetThingAt(editorLevel, editorMode, (selectedBlockX * 4) + 1, (selectedBlockY * 4) + 1));
+						* */
+						
+						unsigned short sbx = (selectedBlockX * 4);
+						unsigned short sby = (selectedBlockY * 4);
+						int tx, ty;
+						for(tx = 0; tx < 4; tx++)
+						{
+							for(ty = 0; ty < 4; ty++)
+							{
+								printf("Thing @ %d, %d: %d\n", 
+									sbx + tx, 
+									sby + ty,
+									GetThingAt(
+										editorLevel,
+										editorMode,
+										sbx + tx,
+										sby + ty
+									)
+								);
+								
+								
+							}
+						}
+					}
 				}
 			}
 		}

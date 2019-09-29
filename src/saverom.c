@@ -478,6 +478,15 @@ bool SaveRom()
 		OutRom[OFFSET_SPAWNS_TANK + (echr * 2) + 1] = Levels[echr][0].SpawnPoint.y;
 	}
 	
+	//	Create things list for each level.  This is currently just a stub
+	//	to experiment with the different types of things.
+	/*for(echr = 0; echr < 256; echr++)
+	{
+		OutRom[0xF12E + echr] = Levels[0][0].Things[echr].thingtype;
+		if(Levels[0][0].Things[echr].thingtype == 0xFF) { break; }
+		else { OutRom[0xF12E + echr] = 0x69; }
+	}*/
+	
 	//	Now onto the actual saving of the file
 	FILE *outfile = fopen("blasterout.nes", "w");
 	//fputs((char *)&OutRom[0], outfile);
