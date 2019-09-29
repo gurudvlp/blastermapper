@@ -202,7 +202,7 @@ bool SaveRom()
 	
 	//	Level 3o data pointer
 	OutRom[prgaddr + 0x4000 + 16] = bytes[0];
-	OutRom[prgaddr + 0x4000 + 17] = bytes[0];
+	OutRom[prgaddr + 0x4000 + 17] = bytes[1];
 	PrintLevelPointer("Level 3 Overhead", (unsigned char *)&bytes);
 	
 	//	Level 4o data pointer

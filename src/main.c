@@ -92,7 +92,7 @@ unsigned short editorCoords[4][4];
 
 int main(int argc, char **argv)
 {
-	printf("blaster mapper v0.0.1\n");
+	printf("blaster mapper v0.0.2\n");
 	
 	if(argc < 2)
 	{
