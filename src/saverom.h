@@ -4,6 +4,18 @@
 #include "main.h"
 //#include "leveltypes.h"
 
+//	The defined values for various sizes really shouldn't be altered.  There are
+//	very specific specs that need to be adhered to for NES ROMs.
+#define SIZE_PRG_BANK 0x4000
+#define SIZE_CHR_BANK 0x2000
+#define SIZE_ROM_HEADER 16
+
+#define COUNT_PRG_BANK 8
+#define COUNT_CHR_BANK 16
+
+#define OFFSET_SPAWNS_TANK 0x1CA4B
+#define OFFSET_SPAWNS_AFTERBOSS 0x1C5B2
+
 typedef struct
 {
 	unsigned short BlockSize;

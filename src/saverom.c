@@ -13,24 +13,24 @@ bool SaveRom()
 	int eb;
 	unsigned short echr;
 	
-	int newsize = 16 + (8 * 0x4000) + (16 * 0x2000);
+	int newsize = SIZE_ROM_HEADER + (COUNT_PRG_BANK * SIZE_PRG_BANK) + (COUNT_CHR_BANK * SIZE_CHR_BANK);
 	unsigned char OutRom[newsize];
 	bzero(&OutRom, sizeof(OutRom));
 	
 	//	Build the ROM Header
-	memcpy(OutRom, RomHeader, 16);
+	memcpy(OutRom, RomHeader, SIZE_ROM_HEADER);
 	
 	//	Build CHR ROM
-	unsigned int chraddr = 16 + (8 * 0x4000);
+	unsigned int chraddr = SIZE_ROM_HEADER + (COUNT_PRG_BANK * SIZE_PRG_BANK);
 
-	for(eb = 0; eb < 16; eb++)
+	for(eb = 0; eb < COUNT_CHR_BANK; eb++)
 	{
-		memcpy(&OutRom[chraddr + (eb * 0x2000)], &ChrRom[eb][0], 0x2000);
+		memcpy(&OutRom[chraddr + (eb * SIZE_CHR_BANK)], &ChrRom[eb][0], SIZE_CHR_BANK);
 	}
 	
 	//	Create PRGROM watermark
-	unsigned short prgaddr = 16;
-	for(eb = 0; eb < 8 * 0x4000; eb += 4)
+	unsigned short prgaddr = SIZE_ROM_HEADER;
+	for(eb = 0; eb < COUNT_PRG_BANK * SIZE_PRG_BANK; eb += 4)
 	{
 		OutRom[eb + prgaddr] = 'g';
 		OutRom[eb + prgaddr + 1] = 'u';
@@ -39,9 +39,11 @@ bool SaveRom()
 	}
 	
 	//	Copy banks 3-7
+	//	Bank 3 includes pointers to things, also some other unknown data.
+	//	The remaining banks are the programming for the game.
 	for(eb = 3; eb < 8; eb++)
 	{
-		memcpy(&OutRom[prgaddr + (eb * 0x4000)], &PrgRom[eb][0], 0x4000);
+		memcpy(&OutRom[prgaddr + (eb * SIZE_PRG_BANK)], &PrgRom[eb][0], SIZE_PRG_BANK);
 	}
 	
 	//	Now the actual building of the PRGROM
@@ -99,19 +101,23 @@ bool SaveRom()
 	Out_LevelPointersOffset = 0x0020 + prgaddr;
 	Out_ROMLevelPointerAddr = 0x8020;
 	
+	//	Watermark :)
 	OutRom[prgaddr + 0x14] = 'T';
 	OutRom[prgaddr + 0x15] = 'O';
 	OutRom[prgaddr + 0x16] = 'A';
 	OutRom[prgaddr + 0x17] = 'D';
-	OutRom[prgaddr + 0x18] = 0x00;
-	OutRom[prgaddr + 0x19] = 0x01;
 	
-	OutRom[prgaddr + 0x14 + 0x4000] = 'B';
-	OutRom[prgaddr + 0x15 + 0x4000] = 'M';
-	OutRom[prgaddr + 0x16 + 0x4000] = '<';
-	OutRom[prgaddr + 0x17 + 0x4000] = '3';
-	OutRom[prgaddr + 0x18 + 0x4000] = 'R';
-	OutRom[prgaddr + 0x19 + 0x4000] = 'B';
+	//	Program Version
+	OutRom[prgaddr + 0x18] = 0x00;
+	OutRom[prgaddr + 0x19] = 0x02;
+	
+	//	Second bank watermark
+	OutRom[prgaddr + 0x14 + 0x4000] = 'L';
+	OutRom[prgaddr + 0x15 + 0x4000] = 'i';
+	OutRom[prgaddr + 0x16 + 0x4000] = 'n';
+	OutRom[prgaddr + 0x17 + 0x4000] = 'u';
+	OutRom[prgaddr + 0x18 + 0x4000] = 's';
+	OutRom[prgaddr + 0x19 + 0x4000] = 4;
 	
 	//unsigned short lvlptraddr = 0x20;
 	//unsigned short dataaddr = lvlptraddr + (12 * 5);
@@ -388,6 +394,7 @@ bool SaveRom()
 	unsigned short ttlsize = 0;
 	SerializedMapInfo smi[16];
 	
+	//	Areas 1-5 Tank
 	datasize[0] = BuildMapData(&OutRom[Out_MapDataOffset], &Levels[0][0], highblock[0], &smi[0]);
 	BuildMapPointers(&Levels[0][0], 0x1640, &smi[0], &OutRom[0x30]);
 	ttlsize += datasize[0];
@@ -428,10 +435,9 @@ bool SaveRom()
 	ttlsize += datasize[8];
 	
 	datasize[9] = BuildMapData(&OutRom[Out_MapDataOffset + 0x4000 + ttlsize], &Levels[2][1], highblock[9], &smi[9]);
-	printf("Level 3 Overhead Map data started at %04x\n", Out_MapDataOffset + 0x4000 + ttlsize);
 	BuildMapPointers(&Levels[2][1], 0x1640 + ttlsize, &smi[9], &OutRom[0x4030 + 48]);
 	ttlsize += datasize[9];
-	printf("Size of level 3 data: %04x\n", datasize[9]);
+	
 	
 	//	Levels 2, 4-8 overhead
 	ttlsize = 0;
@@ -440,265 +446,43 @@ bool SaveRom()
 	ttlsize += datasize[10];
 	
 	datasize[11] = BuildMapData(&OutRom[Out_OvMapDataOffset + 0x8000 + ttlsize], &Levels[1][1], highblock[11], &smi[11]);
-	BuildMapPointers(&Levels[1][1], 0x1C60 + ttlsize, &smi[11], &OutRom[0x8030] + 12);
+	BuildMapPointers(&Levels[1][1], 0x1C60 + ttlsize, &smi[11], &OutRom[0x8030 + 12]);
 	ttlsize += datasize[11];
 	
 	datasize[12] = BuildMapData(&OutRom[Out_OvMapDataOffset + 0x8000 + ttlsize], &Levels[5][1], highblock[12], &smi[12]);
-	BuildMapPointers(&Levels[5][1], 0x1C60 + ttlsize, &smi[12], &OutRom[0x8030] + 24);
+	BuildMapPointers(&Levels[5][1], 0x1C60 + ttlsize, &smi[12], &OutRom[0x8030 + 24]);
 	ttlsize += datasize[12];
 	
 	datasize[13] = BuildMapData(&OutRom[Out_OvMapDataOffset + 0x8000 + ttlsize], &Levels[7][1], highblock[13], &smi[13]);
-	BuildMapPointers(&Levels[7][1], 0x1C60 + ttlsize, &smi[13], &OutRom[0x8030] + 36);
+	BuildMapPointers(&Levels[7][1], 0x1C60 + ttlsize, &smi[13], &OutRom[0x8030 + 36]);
 	ttlsize += datasize[13];
 	
 	datasize[14] = BuildMapData(&OutRom[Out_OvMapDataOffset + 0x8000 + ttlsize], &Levels[3][1], highblock[14], &smi[14]);
-	BuildMapPointers(&Levels[3][1], 0x1C60 + ttlsize, &smi[14], &OutRom[0x8030] + 48);
+	BuildMapPointers(&Levels[3][1], 0x1C60 + ttlsize, &smi[14], &OutRom[0x8030 + 48]);
 	ttlsize += datasize[14];
 	
 	datasize[15] = BuildMapData(&OutRom[Out_OvMapDataOffset + 0x8000 + ttlsize], &Levels[6][1], highblock[15], &smi[15]);
-	BuildMapPointers(&Levels[6][1], 0x1C60 + ttlsize, &smi[15], &OutRom[0x8030] + 60);
+	BuildMapPointers(&Levels[6][1], 0x1C60 + ttlsize, &smi[15], &OutRom[0x8030 + 60]);
 	ttlsize += datasize[15];
 	
 	
-	
-	/*for(echr = 0; echr < 5; echr++)
-	{
-		datasize[echr] = BuildMapData((unsigned char *)&mapmeta, 
-									&Levels[echr][0], 
-									highblock[echr], 
-									&blocksize, 
-									&subblocksize, 
-									&usbsize, 
-									&usbattrsize
-						);
-		
-		for(eb = 0; eb < datasize[echr]; eb++)
-		{
-			OutRom[prgaddr + nextstart + eb] = mapmeta[eb];
-		}
-		
-		//	Build pointers to the data
-		//	Block pointer
-		OutRomAddressToBytes(nextstart + 0x8000, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x20 + (echr * 12) + 8] = bytes[0];
-		OutRom[prgaddr + 0x20 + (echr * 12) + 9] = bytes[1];
-		
-		//	Subblock pointer
-		OutRomAddressToBytes(nextstart + 0x8000 + blocksize, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x20 + (echr * 12) + 6] = bytes[0];
-		OutRom[prgaddr + 0x20 + (echr * 12) + 7] = bytes[1];
-		
-		//	USB Pointer
-		OutRomAddressToBytes(nextstart + 0x8000 + blocksize + subblocksize, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x20 + (echr * 12) + 4] = bytes[0];
-		OutRom[prgaddr + 0x20 + (echr * 12) + 5] = bytes[1];
-		
-		//	USB Attribute Pointer
-		OutRomAddressToBytes(nextstart + 0x8000 + blocksize + subblocksize + usbsize, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x20 + (echr * 12) + 2] = bytes[0];
-		OutRom[prgaddr + 0x20 + (echr * 12) + 3] = bytes[1];
-		
-		//	Map pointer
-		OutRomAddressToBytes(0x132 + (echr * 1024) + 0x8000, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x20 + (echr * 12) + 10] = bytes[0];
-		OutRom[prgaddr + 0x20 + (echr * 12) + 11] = bytes[1];
-		
-		//	Palette pointer
-		OutRomAddressToBytes(0x92 + (echr * 16) + 0x8000, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x20 + (echr * 12)] = bytes[0];
-		OutRom[prgaddr + 0x20 + (echr * 12) + 1] = bytes[1];
-		
-		nextstart += datasize[echr];
-	}
-	
-	//	Levels 6-8 tank
-	
-	nextstart = 0x1640;
-	
-	for(echr = 0; echr < 3; echr++)
-	{
-		datasize[echr + 5] = BuildMapData((unsigned char *)&mapmeta, 
-									&Levels[echr + 5][0], 
-									highblock[echr + 5], 
-									&blocksize, 
-									&subblocksize, 
-									&usbsize, 
-									&usbattrsize
-						);
-		
-		for(eb = 0; eb < datasize[echr + 5]; eb++)
-		{
-			OutRom[prgaddr + nextstart + 0x4000 + eb] = mapmeta[eb];
-		}
-		
-		//	Build pointers to the data
-		//	Block pointer
-		OutRomAddressToBytes(nextstart + 0x8000, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 8] = bytes[0];
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 9] = bytes[1];
-		
-		//	Subblock pointer
-		OutRomAddressToBytes(nextstart + 0x8000 + blocksize, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 6] = bytes[0];
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 7] = bytes[1];
-		
-		//	USB Pointer
-		OutRomAddressToBytes(nextstart + 0x8000 + blocksize + subblocksize, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 4] = bytes[0];
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 5] = bytes[1];
-		
-		//	USB Attribute Pointer
-		OutRomAddressToBytes(nextstart + 0x8000 + blocksize + subblocksize + usbsize, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 2] = bytes[0];
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 3] = bytes[1];
-		
-		//	Map pointer
-		OutRomAddressToBytes(0x132 + (echr * 1024) + 0x8000, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 10] = bytes[0];
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 11] = bytes[1];
-		
-		//	Palette pointer
-		OutRomAddressToBytes(0x92 + (echr * 16) + 0x8000, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x4020 + (echr * 12)] = bytes[0];
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 1] = bytes[1];
-		
-		nextstart += datasize[echr + 5];
-	}
-	
-	//	Levels 1 & 3 overhead
-	
-	for(echr = 3; echr < 5; echr++)
-	{
-		int lvlno = echr;
-		if(lvlno == 3) { lvlno = 0; } else { lvlno = 2; }
-		
-		datasize[echr + 5] = BuildMapData((unsigned char *)&mapmeta, 
-									&Levels[lvlno][1], 
-									highblock[echr + 5], 
-									&blocksize, 
-									&subblocksize, 
-									&usbsize, 
-									&usbattrsize
-						);
-		
-		for(eb = 0; eb < datasize[echr + 5]; eb++)
-		{
-			OutRom[prgaddr + nextstart + 0x4000 + eb] = mapmeta[eb];
-		}
-		
-		//	Build pointers to the data
-		//	Block pointer
-		OutRomAddressToBytes(nextstart + 0x8000, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 8] = bytes[0];
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 9] = bytes[1];
-		
-		//	Subblock pointer
-		OutRomAddressToBytes(nextstart + 0x8000 + blocksize, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 6] = bytes[0];
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 7] = bytes[1];
-		
-		//	USB Pointer
-		OutRomAddressToBytes(nextstart + 0x8000 + blocksize + subblocksize, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 4] = bytes[0];
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 5] = bytes[1];
-		
-		//	USB Attribute Pointer
-		OutRomAddressToBytes(nextstart + 0x8000 + blocksize + subblocksize + usbsize, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 2] = bytes[0];
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 3] = bytes[1];
-		
-		//	Map pointer
-		OutRomAddressToBytes(0x132 + (echr * 1024) + 0x8000, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 10] = bytes[0];
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 11] = bytes[1];
-		
-		//	Palette pointer
-		OutRomAddressToBytes(0x92 + (echr * 16) + 0x8000, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x4020 + (echr * 12)] = bytes[0];
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 1] = bytes[1];
-		
-		nextstart += datasize[echr + 5];
-	}
-	
-	//	Levels 2, 5-8 overhead
-	//	Ordered by 5, 2, 6, 8, 4, 7
-	
-	nextstart = 0x1960;
-	for(echr = 0; echr < 6; echr++)
-	{
-		int lvlno;
-		if(echr == 0) { lvlno = 4; }
-		else if(echr == 1) { lvlno = 1; }
-		else if(echr == 2) { lvlno = 5; }
-		else if(echr == 3) { lvlno = 7; }
-		else if(echr == 4) { lvlno = 3; }
-		else { lvlno = 6; }
-		
-		datasize[echr + 10] = BuildMapData((unsigned char *)&mapmeta, 
-									&Levels[lvlno][1], 
-									highblock[echr + 10], 
-									&blocksize, 
-									&subblocksize, 
-									&usbsize, 
-									&usbattrsize
-						);
-		
-		for(eb = 0; eb < datasize[echr + 10]; eb++)
-		{
-			OutRom[prgaddr + nextstart + 0x8000 + eb] = mapmeta[eb];
-		}
-		
-		//	Build pointers to the data
-		//	Block pointer
-		OutRomAddressToBytes(nextstart + 0x8000, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x8020 + (echr * 12) + 8] = bytes[0];
-		OutRom[prgaddr + 0x8020 + (echr * 12) + 9] = bytes[1];
-		
-		//	Subblock pointer
-		OutRomAddressToBytes(nextstart + 0x8000 + blocksize, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x8020 + (echr * 12) + 6] = bytes[0];
-		OutRom[prgaddr + 0x8020 + (echr * 12) + 7] = bytes[1];
-		
-		//	USB Pointer
-		OutRomAddressToBytes(nextstart + 0x8000 + blocksize + subblocksize, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x8020 + (echr * 12) + 4] = bytes[0];
-		OutRom[prgaddr + 0x8020 + (echr * 12) + 5] = bytes[1];
-		
-		//	USB Attribute Pointer
-		OutRomAddressToBytes(nextstart + 0x8000 + blocksize + subblocksize + usbsize, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x8020 + (echr * 12) + 2] = bytes[0];
-		OutRom[prgaddr + 0x8020 + (echr * 12) + 3] = bytes[1];
-		
-		//	Map pointer
-		OutRomAddressToBytes(0x160 + (echr * 1024) + 0x8000, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 10] = bytes[0];
-		OutRom[prgaddr + 0x4020 + (echr * 12) + 11] = bytes[1];
-		
-		//	Palette pointer
-		OutRomAddressToBytes(0x92 + (echr * 16) + 0x8000, (unsigned char *)&bytes);
-		OutRom[prgaddr + 0x8020 + (echr * 12)] = bytes[0];
-		OutRom[prgaddr + 0x8020 + (echr * 12) + 1] = bytes[1];
-		
-		nextstart += datasize[echr + 10];
-	}*/
-	
 	//	Assemble the spawn points
-	//	Overhead spawn points start at 0x1C5B2
-	//	Tank spawn points start at 0x1CA4B
+	//	Overhead spawn points start at 0x1C5B2 (OFFSET_SPAWNS_AFTERBOSS)
+	//	Tank spawn points start at 0x1CA4B (OFFSET_SPAWNS_TANK)
 	for(echr = 0; echr < 8; echr++)
 	{
-		OutRom[0x1C5B2 + (echr * 2)] = Levels[echr][1].SpawnPoint.x;
-		OutRom[0x1C5B2 + (echr * 2) + 1] = Levels[echr][1].SpawnPoint.y;
+		OutRom[OFFSET_SPAWNS_AFTERBOSS + (echr * 2)] = Levels[echr][1].SpawnPoint.x;
+		OutRom[OFFSET_SPAWNS_AFTERBOSS + (echr * 2) + 1] = Levels[echr][1].SpawnPoint.y;
 		
-		OutRom[0x1CA4B + (echr * 2)] = Levels[echr][0].SpawnPoint.x;
-		OutRom[0x1CA4B + (echr * 2) + 1] = Levels[echr][0].SpawnPoint.y;
+		OutRom[OFFSET_SPAWNS_TANK + (echr * 2)] = Levels[echr][0].SpawnPoint.x;
+		OutRom[OFFSET_SPAWNS_TANK + (echr * 2) + 1] = Levels[echr][0].SpawnPoint.y;
 	}
 	
 	//	Now onto the actual saving of the file
 	FILE *outfile = fopen("blasterout.nes", "w");
 	//fputs((char *)&OutRom[0], outfile);
-	fwrite((char *)&OutRom[0], 16, 1, outfile);
-	fwrite((char *)&OutRom[16], 0x4000, 16, outfile);
+	fwrite((char *)&OutRom[0], SIZE_ROM_HEADER, 1, outfile);
+	fwrite((char *)&OutRom[SIZE_ROM_HEADER], SIZE_PRG_BANK, 16, outfile);
 	fclose(outfile);
 	
 	printf("Saved rebuilt ROM\n");
@@ -864,6 +648,7 @@ void BuildMapPointers(Level * level, unsigned short startloc, SerializedMapInfo 
 	//	palette (starts at 0x0092
 	if(level->levelid < 5 && level->leveltype == LevelType_Tank)
 	{
+		//	Areas 1-5 Tank
 		addr = level->levelid * 16;
 		addr += 0x0092;
 		OutRomAddressToBytes(addr + 0x8000, (unsigned char *)&bytes);
@@ -874,9 +659,11 @@ void BuildMapPointers(Level * level, unsigned short startloc, SerializedMapInfo 
 		OutRomAddressToBytes(addr + 0x8000, (unsigned char *)&bytes);
 		outbuf[10] = bytes[0];
 		outbuf[11] = bytes[1];
+		printf("Level %d Tank: Map Data Ptr: %02x %02x\n", level->levelid, bytes[0], bytes[1]);
 	}
 	else if(level->levelid > 4 && level->leveltype == LevelType_Tank)
 	{
+		//	Areas 5, 6 and 7 Tank
 		addr = (level->levelid - 5) * 16;
 		addr += 0x0092;
 		OutRomAddressToBytes(addr + 0x8000, (unsigned char *)&bytes);
@@ -887,23 +674,31 @@ void BuildMapPointers(Level * level, unsigned short startloc, SerializedMapInfo 
 		OutRomAddressToBytes(addr + 0x8000, (unsigned char *)&bytes);
 		outbuf[10] = bytes[0];
 		outbuf[11] = bytes[1];
+		printf("Level %d Tank: Map Data Ptr: %02x %02x\n", level->levelid, bytes[0], bytes[1]);
 	}
 	else if(level->leveltype == LevelType_Overhead &&
 		(level->levelid == 0 || level->levelid == 2))
 	{
+		//	Areas 1 and 3 Overhead
 		if(level->levelid == 0) { addr = 48; } else { addr = 64; }
 		addr += 0x0092;
 		OutRomAddressToBytes(addr + 0x8000, (unsigned char *)&bytes);
 		outbuf[0] = bytes[0];
 		outbuf[1] = bytes[1];
 		
-		if(level->levelid == 0) { addr = (Out_MapOffset - 16) + (1024 * 3); }
-		else { addr = (Out_MapOffset - 16) + (1024 * 4); }
+		if(level->levelid == 0) 
+		{ 
+			addr = (Out_MapOffset - 16) + (1024 * 3); 
+		}
+		else 
+		{ 
+			addr = (Out_MapOffset - 16) + (1024 * 4); 
+		}
 		OutRomAddressToBytes(addr + 0x8000, (unsigned char *)&bytes);
 		outbuf[10] = bytes[0];
 		outbuf[11] = bytes[1];
 		
-		//printf("Level %d Overhead: Map Data Ptr: %02x %02x\n", level->levelid, bytes[0], bytes[1]);
+		printf("Level %d Overhead: Map Data Ptr: %02x %02x\n", level->levelid, bytes[0], bytes[1]);
 	}
 	else
 	{
@@ -924,6 +719,7 @@ void BuildMapPointers(Level * level, unsigned short startloc, SerializedMapInfo 
 		OutRomAddressToBytes(addr + 0x8000, (unsigned char *)&bytes);
 		outbuf[10] = bytes[0];
 		outbuf[11] = bytes[1];
+		printf("Level %d Overhead: Map Data Ptr: %02x %02x\n", level->levelid, bytes[0], bytes[1]);
 	}
 	
 }

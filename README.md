@@ -3,7 +3,18 @@ Level editor for the Blaster Master NES ROM.
 
 You will need a copy of the Blaster Master ROM, which is not included.
 
-This is an early alpha release.  It's mostly funcitonal, but some majorly needed functions are missing!
+This is an early alpha release.  You can view all of the maps in the game, edit,
+and save them.  There is some sort of bug still though resulting in corrupted
+maps that seems to get progressively worse the more edits you make.
+
+## Compilation
+
+You will need to install a few packages to get this to compile.  Here are a few
+for Debian:
+
+libx11-dev<br />
+mesa-common-dev<br />
+libglu1-mesa-dev
 
 ## How To
 
