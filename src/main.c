@@ -234,7 +234,10 @@ int main(int argc, char **argv)
 				//	c 54
 				//	v 55
 				//	+ 86
+				//	= 21
 				//	- 82
+				//	[ 34
+				//	] 35
 				//	t 28
 				//	keyboard1 10,11,12...
 				if(xke->keycode == 9)
@@ -368,9 +371,11 @@ int main(int argc, char **argv)
 				if(editorZoom == ZOOM_SCREEN)
 				{
 					//	Check for block rotation keystrokes
-					if(xke->keycode == 80)
+					if(xke->keycode == 80
+					|| xke->keycode == 35)
 					{
 						//	keypad 8, "up"
+						//	]
 						unsigned char cblock = BlockAt(editorLevel, editorMode, selectedBlockX, selectedBlockY);
 						if(cblock == 0xFF) { cblock = 0x00; }
 						else if(cblock == GetHighestBlockID(editorLevel, editorMode)) { cblock = 0x00; }
@@ -380,9 +385,11 @@ int main(int argc, char **argv)
 						RenderEditor();
 					}
 					
-					if(xke->keycode == 88)
+					if(xke->keycode == 88
+					|| xke->keycode == 34)
 					{
 						//	keypad 2, "down"
+						//	[
 						unsigned char cblock = BlockAt(editorLevel, editorMode, selectedBlockX, selectedBlockY);
 						if(cblock == 0x00) { cblock = GetHighestBlockID(editorLevel, editorMode); }
 						else { cblock--; }
@@ -404,9 +411,11 @@ int main(int argc, char **argv)
 						RenderEditor();
 					}
 					
-					if(xke->keycode == 86)
+					if(xke->keycode == 86
+					|| xke->keycode == 21)
 					{
 						//	+, set spawn point
+						//	=
 						unsigned short spx = (selectedBlockX * 4) + 1;
 						unsigned short spy = (selectedBlockY * 4) + 1;
 						SetSpawnPoint(editorLevel, editorMode, spx, spy);
@@ -416,13 +425,6 @@ int main(int argc, char **argv)
 					
 					if(xke->keycode == 28)
 					{
-						//	t, show things
-						/*printf("Thing 0,0: %d\n", GetThingAt(editorLevel, editorMode, selectedBlockX * 4, selectedBlockY * 4));
-						printf("Thing 1,0: %d\n", GetThingAt(editorLevel, editorMode, (selectedBlockX * 4) + 1, selectedBlockY * 4));
-						printf("Thing 0,1: %d\n", GetThingAt(editorLevel, editorMode, selectedBlockX * 4, (selectedBlockY * 4) + 1));
-						printf("Thing 1,1: %d\n", GetThingAt(editorLevel, editorMode, (selectedBlockX * 4) + 1, (selectedBlockY * 4) + 1));
-						* */
-						
 						unsigned short sbx = (selectedBlockX * 4);
 						unsigned short sby = (selectedBlockY * 4);
 						int tx, ty;

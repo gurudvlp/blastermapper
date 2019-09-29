@@ -31,8 +31,9 @@ Keyboard keys 1-8 change levels, and 0 switches between tank and overhead.<br />
 Enter - Zoom in<br />
 Escape - Zoom out/exit<br />
 S - Save Rom to blasterout.nes<br />
+T - List all things that spawn on selected block<br />
 C - Copy block<br />
 V - Paste block<br />
-Key pad 8 - Increase block id<br />
-Key pad 2 - Decrease block id<br />
-Key pad + - Set spawn point<br />
+Key pad 8, or ] - Increase block id<br />
+Key pad 2, or [ - Decrease block id<br />
+Key pad +, or = - Set spawn point<br />
