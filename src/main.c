@@ -35,14 +35,14 @@
 
 //#include "leveltypes.h"
 #include "main.h"
-#include "loadrom.h"
-#include "saverom.h"
-#include "palette.h"
-#include "view_map.h"
-#include "view_quadrant.h"
-#include "view_screen.h"
-#include "view_block.h"
-#include "levelinfo.h"
+#include "rom/loadrom.h"
+#include "rom/saverom.h"
+#include "view/palette.h"
+#include "view/view_map.h"
+#include "view/view_quadrant.h"
+#include "view/view_screen.h"
+#include "view/view_block.h"
+#include "level/levelinfo.h"
 //#include "thing.h"
 
 void SetupXWindows();
@@ -90,6 +90,8 @@ unsigned short editorY = 0;
 unsigned short editorXSelect = 0;
 unsigned short editorYSelect = 0;
 unsigned short editorCoords[4][4];
+
+unsigned short editorThing = 0;
 
 int main(int argc, char **argv)
 {
@@ -425,25 +427,27 @@ int main(int argc, char **argv)
 					
 					if(xke->keycode == 28)
 					{
+						//	t, list things that spawn on this block
 						unsigned short sbx = (selectedBlockX * 4);
 						unsigned short sby = (selectedBlockY * 4);
+						
 						int tx, ty;
 						for(tx = 0; tx < 4; tx++)
 						{
 							for(ty = 0; ty < 4; ty++)
 							{
-								printf("Thing @ %d, %d: %d\n", 
-									sbx + tx, 
-									sby + ty,
-									GetThingAt(
-										editorLevel,
-										editorMode,
-										sbx + tx,
-										sby + ty
-									)
+								short loopthing = GetThingAt(
+									editorLevel,
+									editorMode,
+									sbx + tx,
+									sby + ty
 								);
 								
+								printf("Thing found: %d\n", loopthing);
 								
+								//	This isn't really done.  For now, set editor
+								//	to the newest thing found on this block.
+								editorThing = loopthing;
 							}
 						}
 					}

@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "main.h"
-#include "leveltypes.h"
+#include "../main.h"
+#include "../level/leveltypes.h"
 
 bool LoadRom(char * romfile);
 

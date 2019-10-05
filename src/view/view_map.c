@@ -7,8 +7,8 @@
 #include <GL/glu.h>
 
 #include "view_map.h"
-#include "leveltypes.h"
-#include "levelinfo.h"
+#include "../level/leveltypes.h"
+#include "../level/levelinfo.h"
 
 void RenderMap_Block(Level * level, BlockID blkid, int x, int y, unsigned char darken);
 void RenderMap_SubBlock(Level * level, SubBlockID sblkid, int x, int y);

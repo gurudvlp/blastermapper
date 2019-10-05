@@ -7,7 +7,7 @@
 #include <GL/glu.h>
 
 #include "view_block.h"
-#include "leveltypes.h"
+#include "../level/leveltypes.h"
 
 void RenderBlock_Block(Level * level, BlockID blkid, int x, int y);
 void RenderBlock_SubBlock(Level * level, SubBlockID sblkid, int x, int y);

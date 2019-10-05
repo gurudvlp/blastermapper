@@ -8,8 +8,8 @@
 
 #include "view_quadrant.h"
 #include "view_screen.h"
-#include "leveltypes.h"
-#include "levelinfo.h"
+#include "../level/leveltypes.h"
+#include "../level/levelinfo.h"
 
 void RenderScreen_Block(Level * level, BlockID blkid, int x, int y);
 void RenderScreen_SubBlock(Level * level, SubBlockID sblkid, int x, int y);

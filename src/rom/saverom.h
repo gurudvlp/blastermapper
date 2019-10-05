@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "main.h"
+#include "../main.h"
 //#include "leveltypes.h"
 
 //	The defined values for various sizes really shouldn't be altered.  There are

@@ -7,8 +7,8 @@
 #include <GL/glu.h>
 
 #include "view_quadrant.h"
-#include "leveltypes.h"
-#include "levelinfo.h"
+#include "../level/leveltypes.h"
+#include "../level/levelinfo.h"
 
 void RenderQuadrant_Block(Level * level, BlockID blkid, int x, int y);
 void RenderQuadrant_SubBlock(Level * level, SubBlockID sblkid, int x, int y);

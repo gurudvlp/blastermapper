@@ -1,13 +1,13 @@
 OBJ = src/main.c \
-	src/loadrom.c \
-	src/saverom.c \
-	src/palette.c \
-	src/view_map.c \
-	src/view_quadrant.c \
-	src/view_screen.c \
-	src/view_block.c \
-	src/levelinfo.c \
-	src/thing.c
+	src/rom/loadrom.c \
+	src/rom/saverom.c \
+	src/view/palette.c \
+	src/view/view_map.c \
+	src/view/view_quadrant.c \
+	src/view/view_screen.c \
+	src/view/view_block.c \
+	src/level/levelinfo.c \
+	src/level/thing.c
 
 #	Any special libraries
 LIBS = -pthread -lX11 -lGL -lGLU -g -Wall
