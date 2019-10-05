@@ -1,6 +1,7 @@
 OBJ = src/main.c \
 	src/rom/loadrom.c \
 	src/rom/saverom.c \
+	src/rom/rombuilder.c \
 	src/view/palette.c \
 	src/view/view_map.c \
 	src/view/view_quadrant.c \

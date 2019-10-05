@@ -124,7 +124,7 @@ short GetThingAt(int lvl, int lvlmode, int x, int y)
 	if(lvlmode < 0 || lvlmode > 1) { return -1; }
 	Level * level = (Level *)&Levels[lvl][lvlmode];
 	
-	printf("GetThingAt: Level: %d:%d, Coords: %d, %d\n", lvl, lvlmode, x, y);
+	//printf("GetThingAt: Level: %d:%d, Coords: %d, %d\n", lvl, lvlmode, x, y);
 	
 	int et;
 	for(et = 0; et < 512; et++)

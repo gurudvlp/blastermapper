@@ -4,120 +4,33 @@
 
 #include "loadrom.h"
 #include "saverom.h"
+#include "rombuilder.h"
 
 bool SaveRom()
 {
 	//	Here goes nothing..
 	//	Save the rebuilt ROM
+	//
+	//	See docs/Rom Layout.txt for an explanation of how the ROM is laid out.
 	
 	int eb;
 	unsigned short echr;
 	
-	int newsize = SIZE_ROM_HEADER + (COUNT_PRG_BANK * SIZE_PRG_BANK) + (COUNT_CHR_BANK * SIZE_CHR_BANK);
-	unsigned char OutRom[newsize];
-	bzero(&OutRom, sizeof(OutRom));
+	unsigned char  * OutRom = build_InitializeRom();
 	
-	//	Build the ROM Header
-	memcpy(OutRom, RomHeader, SIZE_ROM_HEADER);
+	build_CopyProgramming(OutRom);
+	build_SpawnPoints(OutRom);
+	build_Palettes(OutRom);
 	
-	//	Build CHR ROM
-	unsigned int chraddr = SIZE_ROM_HEADER + (COUNT_PRG_BANK * SIZE_PRG_BANK);
-
-	for(eb = 0; eb < COUNT_CHR_BANK; eb++)
-	{
-		memcpy(&OutRom[chraddr + (eb * SIZE_CHR_BANK)], &ChrRom[eb][0], SIZE_CHR_BANK);
-	}
-	
-	//	Create PRGROM watermark
-	unsigned short prgaddr = SIZE_ROM_HEADER;
-	for(eb = 0; eb < COUNT_PRG_BANK * SIZE_PRG_BANK; eb += 4)
-	{
-		OutRom[eb + prgaddr] = 'g';
-		OutRom[eb + prgaddr + 1] = 'u';
-		OutRom[eb + prgaddr + 2] = 'r';
-		OutRom[eb + prgaddr + 3] = 'u';
-	}
-	
-	//	Copy banks 3-7
-	//	Bank 3 includes pointers to things, also some other unknown data.
-	//	The remaining banks are the programming for the game.
-	for(eb = 3; eb < 8; eb++)
-	{
-		memcpy(&OutRom[prgaddr + (eb * SIZE_PRG_BANK)], &PrgRom[eb][0], SIZE_PRG_BANK);
-	}
-	
-	//	Now the actual building of the PRGROM
-	//	20 bytes of level pointers
-	//		[level][scrolltable]
-	//	Level 1:
-	//		12b:[datapointers]
-	//			palette
-	//			usb attribute table
-	//			usb table
-	//			sb table
-	//			block table
-	//			map
-	//
-	//	0x00 [lvlptr / scrollptr]
-	//	0x14 TOAD
-	//	0x18 {0}{1}
-	//	0x20 level 1 pointers
-	//	0x2C level 2 pointers
-	//	0x38 level 3 pointers
-	//	0xxx level 4 pointers
-	//	0xxx level 5 pointers
-	//	0x92 level 1 palette
-	//	0xA2 level 2 palette
-	//	0xB2 level 3 palette
-	//	0xC2 level 4 palette
-	//	0xD2 level 5 palette
-	//	0xE2 level 1 scroll table
-	//	0xF2 level 2 scroll table
-	//	0x102 level 3 scroll table
-	//	0x112 level 4 scroll table
-	//	0x122 level 5 scroll table
-	//	0x132 level 1 map (1024 bytes)
-	//	0x532 level 2 map
-	//	0x932 level 3 map
-	//	0xD32 level 4 map
-	//	0x1232 level 5 map
-	//	0x1632 gurutronik
-	//	0x1640 block/subblock/ultrasubblock/usbattr
-	//
-	//	Levels 6-8, overhead 1 & 3
-	//
-	//	same as above, but + 0x4000
-	//	Levels 2, 5-8 overhead
-	//
-	//	Scroll table starts at 0x100 + 0x8000
-	//	Maps start at 0x160 + 0x8000
-	//	Map data starts at 0x1960 + 0x8000 (??  0x1C60 maybe?)
-	
-	Out_PaletteOffset = 0x0092 + prgaddr;
-	Out_MapOffset = 0x0132 + prgaddr;
-	Out_OvMapOffset = 0x0160 + prgaddr;
-	Out_MapDataOffset = 0x1640 + prgaddr;
-	Out_OvMapDataOffset = 0x1C60 + prgaddr;
-	Out_LevelPointersOffset = 0x0020 + prgaddr;
+	//Out_PaletteOffset = 0x0092 + SIZE_ROM_HEADER;
+	Out_MapOffset = 0x0132 + SIZE_ROM_HEADER;
+	Out_OvMapOffset = 0x0160 + SIZE_ROM_HEADER;
+	Out_MapDataOffset = 0x1640 + SIZE_ROM_HEADER;
+	Out_OvMapDataOffset = 0x1C60 + SIZE_ROM_HEADER;
+	Out_LevelPointersOffset = 0x0020 + SIZE_ROM_HEADER;
 	Out_ROMLevelPointerAddr = 0x8020;
 	
-	//	Watermark :)
-	OutRom[prgaddr + 0x14] = 'T';
-	OutRom[prgaddr + 0x15] = 'O';
-	OutRom[prgaddr + 0x16] = 'A';
-	OutRom[prgaddr + 0x17] = 'D';
 	
-	//	Program Version
-	OutRom[prgaddr + 0x18] = 0x00;
-	OutRom[prgaddr + 0x19] = 0x02;
-	
-	//	Second bank watermark
-	OutRom[prgaddr + 0x14 + 0x4000] = 'L';
-	OutRom[prgaddr + 0x15 + 0x4000] = 'i';
-	OutRom[prgaddr + 0x16 + 0x4000] = 'n';
-	OutRom[prgaddr + 0x17 + 0x4000] = 'u';
-	OutRom[prgaddr + 0x18 + 0x4000] = 's';
-	OutRom[prgaddr + 0x19 + 0x4000] = 4;
 	
 	//unsigned short lvlptraddr = 0x20;
 	//unsigned short dataaddr = lvlptraddr + (12 * 5);
@@ -132,159 +45,159 @@ bool SaveRom()
 	
 	//	Level 1 data pointer
 	OutRomAddressToBytes(0x20 + 0x8000, (unsigned char *)&bytes);
-	OutRom[prgaddr] = bytes[0];
-	OutRom[prgaddr + 1] = bytes[1];
+	OutRom[SIZE_ROM_HEADER] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 1] = bytes[1];
 	PrintLevelPointer("Level 1 Tank", (unsigned char *)&bytes);
 	
 	//	Level 6 data pointer
-	OutRom[prgaddr + 0x4000] = bytes[0];
-	OutRom[prgaddr + 0x4000 + 1] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 0x4000] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 1] = bytes[1];
 	PrintLevelPointer("Level 6 Tank", (unsigned char *)&bytes);
 	
 	//	Level 5o data pointer
-	OutRom[prgaddr + 0x8000] = bytes[0];
-	OutRom[prgaddr + 0x8000 + 1] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 0x8000] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 1] = bytes[1];
 	PrintLevelPointer("Level 5 Overhead", (unsigned char *)&bytes);
 	
 	//	Level 2 data pointer
 	OutRomAddressToBytes(0x20 + 12 + 0x8000, (unsigned char *)&bytes);
-	OutRom[prgaddr + 4] = bytes[0];
-	OutRom[prgaddr + 5] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 4] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 5] = bytes[1];
 	PrintLevelPointer("Level 2 Tank", (unsigned char *)&bytes);
 	
 	//	Level 7 data pointer
-	OutRom[prgaddr + 0x4000 + 4] = bytes[0];
-	OutRom[prgaddr + 0x4000 + 5] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 4] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 5] = bytes[1];
 	PrintLevelPointer("Level 7 Tank", (unsigned char *)&bytes);
 	
 	//	Level 2o data pointer
-	OutRom[prgaddr + 0x8000 + 4] = bytes[0];
-	OutRom[prgaddr + 0x8000 + 5] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 4] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 5] = bytes[1];
 	PrintLevelPointer("Level 2 Overhead", (unsigned char *)&bytes);
 	
 	//	Level 3 data pointer
 	OutRomAddressToBytes(0x20 + 24 + 0x8000, (unsigned char *)&bytes);
-	OutRom[prgaddr + 8] = bytes[0];
-	OutRom[prgaddr + 9] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 8] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 9] = bytes[1];
 	PrintLevelPointer("Level 3 Tank", (unsigned char *)&bytes);
 	
 	//	Level 8 data pointer
-	OutRom[prgaddr + 0x4000 + 8] = bytes[0];
-	OutRom[prgaddr + 0x4000 + 9] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 8] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 9] = bytes[1];
 	PrintLevelPointer("Level 8 Tank", (unsigned char *)&bytes);
 	
 	//	Level 6o data pointer
-	OutRom[prgaddr + 0x8000 + 8] = bytes[0];
-	OutRom[prgaddr + 0x8000 + 9] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 8] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 9] = bytes[1];
 	PrintLevelPointer("Level 6 Overhead", (unsigned char *)&bytes);
 	
 	//	Level 4 data pointer
 	OutRomAddressToBytes(0x20 + 36 + 0x8000, (unsigned char *)&bytes);
-	OutRom[prgaddr + 12] = bytes[0];
-	OutRom[prgaddr + 13] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 12] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 13] = bytes[1];
 	PrintLevelPointer("Level 4 Tank", (unsigned char *)&bytes);
 	
 	//	Level 1o data pointer
-	OutRom[prgaddr + 0x4000 + 12] = bytes[0];
-	OutRom[prgaddr + 0x4000 + 13] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 12] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 13] = bytes[1];
 	PrintLevelPointer("Level 4 Overhead", (unsigned char *)&bytes);
 	
 	//	Level 8o data pointer
-	OutRom[prgaddr + 0x8000 + 12] = bytes[0];
-	OutRom[prgaddr + 0x8000 + 13] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 12] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 13] = bytes[1];
 	PrintLevelPointer("Level 8 Overhead", (unsigned char *)&bytes);
 	
 	//	Level 5 data pointer
 	OutRomAddressToBytes(0x20 + 48 + 0x8000, (unsigned char *)&bytes);
-	OutRom[prgaddr + 16] = bytes[0];
-	OutRom[prgaddr + 17] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 16] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 17] = bytes[1];
 	PrintLevelPointer("Level 5 Tank", (unsigned char *)&bytes);
 	
 	//	Level 3o data pointer
-	OutRom[prgaddr + 0x4000 + 16] = bytes[0];
-	OutRom[prgaddr + 0x4000 + 17] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 16] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 17] = bytes[1];
 	PrintLevelPointer("Level 3 Overhead", (unsigned char *)&bytes);
 	
 	//	Level 4o data pointer
-	OutRom[prgaddr + 0x8000 + 16] = bytes[0];
-	OutRom[prgaddr + 0x8000 + 17] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 16] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 17] = bytes[1];
 	PrintLevelPointer("Level 4 Overhead", (unsigned char *)&bytes);
 	
 	//	Level 7o data pointer
 	OutRomAddressToBytes(0x20 + 60 + 0x8000, (unsigned char *)&bytes);
-	OutRom[prgaddr + 0x8000 + 20] = bytes[0];
-	OutRom[prgaddr + 0x8000 + 21] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 20] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 21] = bytes[1];
 	PrintLevelPointer("Level 7 Overhead", (unsigned char *)&bytes);
 	
 	//	Level 1 scroll table pointer
 	OutRomAddressToBytes(0xE2 + 0x8000, (unsigned char *)&bytes);
-	OutRom[prgaddr + 2] = bytes[0];
-	OutRom[prgaddr + 3] =  bytes[1];
+	OutRom[SIZE_ROM_HEADER + 2] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 3] =  bytes[1];
 	
 	//	Level 6 scroll table pointer
-	OutRom[prgaddr + 0x4000 + 2] = bytes[0];
-	OutRom[prgaddr + 0x4000 + 3] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 2] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 3] = bytes[1];
 	
 	//	Level 5o scroll table pointer
-	OutRom[prgaddr + 0x8000 + 2] = bytes[0];
-	OutRom[prgaddr + 0x8000 + 3] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 2] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 3] = bytes[1];
 	
 	//	Level 2 scroll table pointer
 	OutRomAddressToBytes(0xE2 + 16 + 0x8000, (unsigned char *)&bytes);
-	OutRom[prgaddr + 6] = bytes[0];
-	OutRom[prgaddr + 7] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 6] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 7] = bytes[1];
 	
 	//	Level 7 scroll table pointer
-	OutRom[prgaddr + 0x4000 + 6] = bytes[0];
-	OutRom[prgaddr + 0x4000 + 7] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 6] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 7] = bytes[1];
 	
 	//	Level 2o scroll table pointer
-	OutRom[prgaddr + 0x8000 + 6] = bytes[0];
-	OutRom[prgaddr + 0x8000 + 7] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 6] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 7] = bytes[1];
 	
 	//	Level 3 scroll table pointer
 	OutRomAddressToBytes(0xE2 + 32 + 0x8000, (unsigned char *)&bytes);
-	OutRom[prgaddr + 10] = bytes[0];
-	OutRom[prgaddr + 11] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 10] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 11] = bytes[1];
 	
 	//	Level 8 scroll table pointer
-	OutRom[prgaddr + 0x4000 + 10] = bytes[0];
-	OutRom[prgaddr + 0x4000 + 11] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 10] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 11] = bytes[1];
 	
 	//	Level 6o scroll table pointer
-	OutRom[prgaddr + 0x8000 + 10] = bytes[0];
-	OutRom[prgaddr + 0x8000 + 11] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 10] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 11] = bytes[1];
 	
 	//	Level 4 scroll table pointer
 	OutRomAddressToBytes(0xE2 + 48 + 0x8000, (unsigned char *)&bytes);
-	OutRom[prgaddr + 14] = bytes[0];
-	OutRom[prgaddr + 15] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 14] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 15] = bytes[1];
 	
 	//	Level 1o scroll table pointer
-	OutRom[prgaddr + 0x4000 + 14] = bytes[0];
-	OutRom[prgaddr + 0x4000 + 15] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 14] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 15] = bytes[1];
 	
 	//	Level 8o scroll table pointer
-	OutRom[prgaddr + 0x8000 + 14] = bytes[0];
-	OutRom[prgaddr + 0x8000 + 15] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 14] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 15] = bytes[1];
 	
 	//	Level 5 scroll table pointer
 	OutRomAddressToBytes(0xE2 + 64 + 0x8000,(unsigned char *) &bytes);
-	OutRom[prgaddr + 18] = bytes[0];
-	OutRom[prgaddr + 19] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 18] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 19] = bytes[1];
 	
 	//	Level 3o scroll table pointer
-	OutRom[prgaddr + 0x4000 + 18] = bytes[0];
-	OutRom[prgaddr + 0x4000 + 19] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 18] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 19] = bytes[1];
 	
 	//	Level 4o scroll table pointer
-	OutRom[prgaddr + 0x8000 + 18] = bytes[0];
-	OutRom[prgaddr + 0x8000 + 19] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 18] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 19] = bytes[0];
 	
 	//	Level 7o scroll table pointer
 	OutRomAddressToBytes(0xE2 + 80 + 0x8000, (unsigned char *)&bytes);
-	OutRom[prgaddr + 0x8000 + 22] = bytes[0];
-	OutRom[prgaddr + 0x8000 + 23] = bytes[1];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 22] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 23] = bytes[1];
 	
 	
 	//	Now to build the scroll tables for each level
@@ -294,7 +207,7 @@ bool SaveRom()
 	{
 		for(eb = 0; eb < 16; eb++)
 		{
-			OutRom[prgaddr + 0xE2 + (16 * echr) + eb] = Levels[echr][0].ScrollTable[eb];
+			OutRom[SIZE_ROM_HEADER + 0xE2 + (16 * echr) + eb] = Levels[echr][0].ScrollTable[eb];
 		}
 	}
 	
@@ -303,48 +216,29 @@ bool SaveRom()
 	{
 		for(eb = 0; eb < 16; eb++)
 		{
-			OutRom[prgaddr + 0x40E2 + (16 * echr) + eb] = Levels[echr + 5][0].ScrollTable[eb];
+			OutRom[SIZE_ROM_HEADER + 0x40E2 + (16 * echr) + eb] = Levels[echr + 5][0].ScrollTable[eb];
 		}
 	}
 	
 	//	Levels 1 & 3 overhead
 	for(eb = 0; eb < 16; eb++)
 	{
-		OutRom[prgaddr + 0x40E2 + 48 + eb] = Levels[0][1].ScrollTable[eb];
-		OutRom[prgaddr + 0x40E2 + 64 + eb] = Levels[2][1].ScrollTable[eb];
+		OutRom[SIZE_ROM_HEADER + 0x40E2 + 48 + eb] = Levels[0][1].ScrollTable[eb];
+		OutRom[SIZE_ROM_HEADER + 0x40E2 + 64 + eb] = Levels[2][1].ScrollTable[eb];
 	}
 	
 	//	Levels 2, 5-8 overhead
 	for(eb = 0; eb < 16; eb++)
 	{
-		OutRom[prgaddr + 0x8160 + eb] = Levels[4][1].ScrollTable[eb];
-		OutRom[prgaddr + 0x8160 + eb + 16] = Levels[1][1].ScrollTable[eb];
-		OutRom[prgaddr + 0x8160 + eb + 32] = Levels[5][1].ScrollTable[eb];
-		OutRom[prgaddr + 0x8160 + eb + 48] = Levels[7][1].ScrollTable[eb];
-		OutRom[prgaddr + 0x8160 + eb + 64] = Levels[3][1].ScrollTable[eb];
-		OutRom[prgaddr + 0x8160 + eb + 80] = Levels[6][1].ScrollTable[eb];
+		OutRom[SIZE_ROM_HEADER + 0x8160 + eb] = Levels[4][1].ScrollTable[eb];
+		OutRom[SIZE_ROM_HEADER + 0x8160 + eb + 16] = Levels[1][1].ScrollTable[eb];
+		OutRom[SIZE_ROM_HEADER + 0x8160 + eb + 32] = Levels[5][1].ScrollTable[eb];
+		OutRom[SIZE_ROM_HEADER + 0x8160 + eb + 48] = Levels[7][1].ScrollTable[eb];
+		OutRom[SIZE_ROM_HEADER + 0x8160 + eb + 64] = Levels[3][1].ScrollTable[eb];
+		OutRom[SIZE_ROM_HEADER + 0x8160 + eb + 80] = Levels[6][1].ScrollTable[eb];
 	}
 	
-	//	Build the palette info for each level
 	
-	BuildSubPalettes((Level *)&Levels[0][0], &OutRom[Out_PaletteOffset]);
-	BuildSubPalettes((Level *)&Levels[1][0], &OutRom[Out_PaletteOffset + 16]);
-	BuildSubPalettes((Level *)&Levels[2][0], &OutRom[Out_PaletteOffset + 32]);
-	BuildSubPalettes((Level *)&Levels[3][0], &OutRom[Out_PaletteOffset + 48]);
-	BuildSubPalettes((Level *)&Levels[4][0], &OutRom[Out_PaletteOffset + 64]);
-	
-	BuildSubPalettes((Level *)&Levels[5][0], &OutRom[Out_PaletteOffset + 0x4000]);
-	BuildSubPalettes((Level *)&Levels[6][0], &OutRom[Out_PaletteOffset + 0x4010]);
-	BuildSubPalettes((Level *)&Levels[7][0], &OutRom[Out_PaletteOffset + 0x4020]);
-	BuildSubPalettes((Level *)&Levels[0][1], &OutRom[Out_PaletteOffset + 0x4030]);
-	BuildSubPalettes((Level *)&Levels[2][1], &OutRom[Out_PaletteOffset + 0x4040]);
-	
-	BuildSubPalettes((Level *)&Levels[4][1], &OutRom[Out_PaletteOffset + 0x8000]);
-	BuildSubPalettes((Level *)&Levels[1][1], &OutRom[Out_PaletteOffset + 0x8010]);
-	BuildSubPalettes((Level *)&Levels[5][1], &OutRom[Out_PaletteOffset + 0x8020]);
-	BuildSubPalettes((Level *)&Levels[7][1], &OutRom[Out_PaletteOffset + 0x8030]);
-	BuildSubPalettes((Level *)&Levels[3][1], &OutRom[Out_PaletteOffset + 0x8040]);
-	BuildSubPalettes((Level *)&Levels[6][1], &OutRom[Out_PaletteOffset + 0x8050]);
 	
 
 	
@@ -466,17 +360,7 @@ bool SaveRom()
 	ttlsize += datasize[15];
 	
 	
-	//	Assemble the spawn points
-	//	Overhead spawn points start at 0x1C5B2 (OFFSET_SPAWNS_AFTERBOSS)
-	//	Tank spawn points start at 0x1CA4B (OFFSET_SPAWNS_TANK)
-	for(echr = 0; echr < 8; echr++)
-	{
-		OutRom[OFFSET_SPAWNS_AFTERBOSS + (echr * 2)] = Levels[echr][1].SpawnPoint.x;
-		OutRom[OFFSET_SPAWNS_AFTERBOSS + (echr * 2) + 1] = Levels[echr][1].SpawnPoint.y;
-		
-		OutRom[OFFSET_SPAWNS_TANK + (echr * 2)] = Levels[echr][0].SpawnPoint.x;
-		OutRom[OFFSET_SPAWNS_TANK + (echr * 2) + 1] = Levels[echr][0].SpawnPoint.y;
-	}
+	
 	
 	//	Create things list for each level.  This is currently just a stub
 	//	to experiment with the different types of things.
@@ -605,17 +489,7 @@ unsigned char USBAttributeToByte(USBAttributes * usbattr)
 	return tbyte;
 }
 
-void BuildSubPalettes(Level * level, unsigned char * spbytes)
-{
-	int esp;
-	for(esp = 0; esp < 4; esp++)
-	{
-		spbytes[esp * 4] = level->SubPalettes[esp].color0;
-		spbytes[(esp * 4) + 1] = level->SubPalettes[esp].color1;
-		spbytes[(esp * 4) + 2] = level->SubPalettes[esp].color2;
-		spbytes[(esp * 4) + 3] = level->SubPalettes[esp].color3;
-	}
-}
+
 
 void BuildMapPointers(Level * level, unsigned short startloc, SerializedMapInfo * smi, unsigned char * outbuf)
 {

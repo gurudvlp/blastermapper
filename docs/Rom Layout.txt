@@ -1,0 +1,118 @@
+This ROM file needs to be structured in a very specific way.  To understand the
+details, you likely need some knowledge of NES programming in general.  A good
+place to start is online.  Nesdev is a good resource.
+
+This document is my own notes that I have adapted based on another document that
+I found on romhacking.net by Benjamin Cutler.  This wouldn't be possible without
+his work.
+
+www.romhacking.net/documents/380/
+
+
+
+PRGROM: 8 x 16 KB banks
+CHRROM: 16 x 8 KB banks (Yeah, I know this can be split up differently)
+
+PRGROM Layout:
+Bank 0: Areas 1 - 5 (Tank)
+Bank 1: Areas 6 - 8 (Tank), 1 and 3 Overhead
+Bank 2: Areas 2, 4 - 8 Overhead (ordered like 5, 2, 6, 8, 4, 7)
+Bank 3: Enemy and Powerup Data, and other data
+Bank 4:	Game programming
+Bank 5: Game programming
+Bank 6: Game programming
+Bank 7: Game programming
+
+
+################################################################################
+
+	Bank 0	::	Areas 1 - 5 Tank
+	
+################################################################################
+
+0x00	Level Pointers / Scroll Table Pointers (20 bytes)
+	0x00	Area 1 Level Pointer
+	0x02	Area 1 Scroll Table Pointer
+	0x04	Area 2 Level Pointer
+	0x06	Area 2 Scroll Table Pointer
+	0x08	Area 3 Level Pointer
+	0x0A	Area 3 Scroll Table Pointer
+	0x0C	Area 4 Level Pointer
+	0x0E	Area 4 Scroll Table Pointer
+	0x10	Area 5 Level Pointer
+	0x12	Area 5 Scroll Table Pointer
+
+Because the location for the data that defines the maps in the game are pointed
+to above, we can take some liberties in the layout of the data.  As long as it
+all fits in the 16 KB bank, we're good to go.
+
+0x14	TOAD (Watermark)
+0x18	blastermaster version (2 bytes)
+
+0x20	Area 1 Data Pointers (12 bytes)
+	0x20	Palette Pointer
+	0x22	Ultra Sub Block Attribute Table Pointer
+	0x24	Ultra Sub Block Table Pointer
+	0x26	Sub Block Table Pointer
+	0x28	Block Table Pointer
+	0x2A	Map Pointer
+
+0x2C	Area 2 Data Pointers (12 bytes)
+0x38	Area 3 Data Pointers (12 bytes)
+0x44	Area 4 Data Pointers (12 bytes)
+0x50	Area 5 Data Pointers (12 bytes)
+
+0x5C	??? Empty space ??
+
+0x92	Area 1 Palette (16 bytes)
+0xA2	Area 2 Palette (16 bytes)
+0xB2	Area 3 Palette (16 bytes)
+0xC2	Area 4 Palette (16 bytes)
+0xD2	Area 5 Palette (16 bytes)
+
+0xE2	Area 1 Scroll Table
+0xF2	Area 2 Scroll Table
+0x102	Area 3 Scroll Table
+0x112	Area 4 Scroll Table
+0x122	Area 5 Scroll Table
+
+0x132	Area 1 Map (1024 bytes)
+0x532	Area 2 Map (1024 bytes)
+0x932	Area 3 Map (1024 bytes)
+0xD32	Area 4 Map (1024 bytes)
+0x1232	Area 5 Map (1024 bytes)
+
+0x1632	Watermark location (currently unused)
+
+The actual map grid for each area is always 32x32 blocks.  There are, however,
+potentially up to 256 blocks, 256 sub blocks, and 256 ultra sub blocks available
+for each Area.  This means that the rest of the map data can be variable sizes.
+
+0x1640	Area 1 Map Data
+	Blocks (4 bytes each, describes the 4 sub blocks that make it up)
+	Sub Block (4 bytes each, describes the 4 ultra sub blocks that make it up)
+	Ultra Sub Blocks (4 bytes each, corresponds to the 4 CHR tiles to draw on screen)
+	USB Attributes (1 byte each, sets attributes for each USB 'tile')
+
+	//	0x1632 gurutronik
+	//	0x1640 block/subblock/ultrasubblock/usbattr
+	//
+
+################################################################################
+
+	Bank 1	::	Areas 6 - 8 Tank
+				Areas 1 & 3 Overhead
+
+################################################################################
+
+This bank is mostly identical to bank 0, but it's 16 KB into the ROM (0x4000)
+
+
+	//	Levels 6-8, overhead 1 & 3
+	//
+	//	same as above, but + 0x4000
+	//	Levels 2, 5-8 overhead
+	//
+	//	Scroll table starts at 0x100 + 0x8000
+	//	Maps start at 0x160 + 0x8000
+	//	Map data starts at 0x1960 + 0x8000 (??  0x1C60 maybe?)

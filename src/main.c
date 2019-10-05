@@ -443,7 +443,7 @@ int main(int argc, char **argv)
 									sby + ty
 								);
 								
-								printf("Thing found: %d\n", loopthing);
+								if(loopthing >= 0) { printf("Thing found: %d\n", loopthing); }
 								
 								//	This isn't really done.  For now, set editor
 								//	to the newest thing found on this block.
