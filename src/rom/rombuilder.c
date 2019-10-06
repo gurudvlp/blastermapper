@@ -180,7 +180,11 @@ void build_ScrollTables(unsigned char * OutRom)
 	
 	for(cnt = 0; cnt < 16; cnt++)
 	{
-		OutRomAddressToBytes(OFFSET_SCROLLTABLE + 0x8000 - 0x10 + (levelorder[cnt] * 16), (unsigned char *)&bytes);
+		OutRomAddressToBytes(
+			OFFSET_SCROLLTABLE + 0x8000 - SIZE_ROM_HEADER + (levelorder[cnt] * levinbank),
+			(unsigned char *)&bytes
+		);
+		
 		OutRom[SIZE_ROM_HEADER + (4 * levinbank) + 2] = bytes[0];
 		OutRom[SIZE_ROM_HEADER + (4 * levinbank) + 3] = bytes[1];
 		
