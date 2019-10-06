@@ -23,10 +23,7 @@ bool SaveRom()
 	build_Palettes(OutRom);
 	build_ScrollTables(OutRom);
 	
-	//Out_MapOffset = 0x0132 + SIZE_ROM_HEADER;
-	//Out_OvMapOffset = 0x0160 + SIZE_ROM_HEADER;
-	//Out_MapDataOffset = 0x1A60 + SIZE_ROM_HEADER;
-	//Out_OvMapDataOffset = 0x1C60 + SIZE_ROM_HEADER;
+
 	Out_LevelPointersOffset = 0x0020 + SIZE_ROM_HEADER;
 	Out_ROMLevelPointerAddr = 0x8020;
 	
@@ -132,13 +129,7 @@ bool SaveRom()
 	OutRom[SIZE_ROM_HEADER + 0x8000 + 20] = bytes[0];
 	OutRom[SIZE_ROM_HEADER + 0x8000 + 21] = bytes[1];
 	PrintLevelPointer("Level 7 Overhead", (unsigned char *)&bytes);
-	
-	////////////////////////////////////////////////////////////////////////////
-	//
-	//	Scroll table pointers
-	//
-	
-	
+
 	
 	////////////////////////////////////////////////////////////////////////////
 	//
@@ -474,12 +465,18 @@ void BuildMapPointers(Level * level, unsigned short startloc, SerializedMapInfo 
 	outbuf[8] = bytes[0];
 	outbuf[9] = bytes[1];
 	
-	//	palette (starts at OFFSET_PALETTE)
+	//	palette: starts at OFFSET_PALETTE - SIZE_ROM_HEADER
+	//		If you don't subtract the size of the ROM header before writing the
+	//		pointer to the ROM, then the game will look 16 bytes further than
+	//		it should for this palette.  It makes the levels look wicked sweet,
+	//		but the palettes are in fact corrupted.  This makes it obvious that
+	//		a palette editor will need to be created at some point.
+	
 	if(level->levelid < 5 && level->leveltype == LevelType_Tank)
 	{
 		//	Areas 1-5 Tank
 		addr = level->levelid * 16;
-		addr += OFFSET_PALETTE;
+		addr += OFFSET_PALETTE - SIZE_ROM_HEADER;	//	Subtract SIZE_ROM_HEADER
 		OutRomAddressToBytes(addr + 0x8000, (unsigned char *)&bytes);
 		outbuf[0] = bytes[0];
 		outbuf[1] = bytes[1];
@@ -494,7 +491,7 @@ void BuildMapPointers(Level * level, unsigned short startloc, SerializedMapInfo 
 	{
 		//	Areas 5, 6 and 7 Tank
 		addr = (level->levelid - 5) * 16;
-		addr += OFFSET_PALETTE;
+		addr += OFFSET_PALETTE - SIZE_ROM_HEADER;
 		OutRomAddressToBytes(addr + 0x8000, (unsigned char *)&bytes);
 		outbuf[0] = bytes[0];
 		outbuf[1] = bytes[1];
@@ -510,7 +507,7 @@ void BuildMapPointers(Level * level, unsigned short startloc, SerializedMapInfo 
 	{
 		//	Areas 1 and 3 Overhead
 		if(level->levelid == 0) { addr = 48; } else { addr = 64; }
-		addr += OFFSET_PALETTE;
+		addr += OFFSET_PALETTE - SIZE_ROM_HEADER;
 		OutRomAddressToBytes(addr + 0x8000, (unsigned char *)&bytes);
 		outbuf[0] = bytes[0];
 		outbuf[1] = bytes[1];
@@ -539,7 +536,7 @@ void BuildMapPointers(Level * level, unsigned short startloc, SerializedMapInfo 
 		else if(level->levelid == 3) { addr = 64; mult = 4; }
 		else if(level->levelid == 6) { addr = 80; mult = 5; }
 		
-		addr += OFFSET_PALETTE;
+		addr += OFFSET_PALETTE - SIZE_ROM_HEADER;
 		OutRomAddressToBytes(addr + 0x8000, (unsigned char *)&bytes);
 		outbuf[0] = bytes[0];
 		outbuf[1] = bytes[1];

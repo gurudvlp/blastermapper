@@ -114,9 +114,13 @@ void build_Palettes(unsigned char * OutRom)
 		if(cnt > 4 && cnt < 10) { oroff += OFFSET_BANK_1; }
 		if(cnt >= 10) { oroff += OFFSET_BANK_2; }
 		
+		oroff += OFFSET_PALETTE;
+		
+		printf("Writing Palette data for level %d:%d at addr:0x%04X\n", cnt, levelorder[cnt], oroff);
+		
 		build_SubPalettes(
 			(Level *)&Levels[levelorder[cnt]][(cnt < 8) ? 0 : 1],
-			&OutRom[OFFSET_PALETTE + oroff]
+			&OutRom[oroff]
 		);
 		
 		//	Because the first two banks each store 5 Areas of data, and the third

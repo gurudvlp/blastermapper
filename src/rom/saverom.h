@@ -43,11 +43,7 @@ unsigned char USBAttributeToByte(USBAttributes * usbattr);
 void BuildSubPalettes(Level * level, unsigned char * spbytes);
 void BuildMapPointers(Level * level, unsigned short startloc, SerializedMapInfo * smi, unsigned char * outbuf);
 
-//unsigned short Out_PaletteOffset;
-//unsigned short Out_MapOffset;
-//unsigned short Out_OvMapOffset;
-//unsigned short Out_MapDataOffset;
-//unsigned short Out_OvMapDataOffset;
+
 unsigned short Out_LevelPointersOffset;
 unsigned short Out_ROMLevelPointerAddr;
 
