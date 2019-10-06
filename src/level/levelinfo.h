@@ -14,6 +14,7 @@ void SetSpawnPoint(int lvl, int lvlmode, int x, int y);
 void PrintSpawnPoints();
 short GetThingAt(int lvl, int lvlmode, int x, int y);
 unsigned char level_MapToBytes(unsigned char * mapdata, Level * level);
+unsigned char level_USBAttributeToByte(USBAttributes * usbattr);
 
 GLuint darkenTextureID;
 GLuint spawnPointTextureID;

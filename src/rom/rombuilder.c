@@ -225,43 +225,7 @@ void build_ScrollTables(unsigned char * OutRom)
 		if(cnt == 4) { levinbank = 0; addbank++; }
 		if(cnt == 9) { levinbank = 0; addbank++; }
 	}
-/*	
-	//	Levels 1-5 tank
-	for(echr = 0; echr < 5; echr++)
-	{
-		for(eb = 0; eb < 16; eb++)
-		{
-			OutRom[OFFSET_SCROLLTABLE + (16 * echr) + eb] = Levels[echr][0].ScrollTable[eb];
-		}
-	}
-	
-	//	Levels 6-8 tank
-	for(echr = 0; echr < 3; echr++)
-	{
-		for(eb = 0; eb < 16; eb++)
-		{
-			OutRom[OFFSET_BANK_1 + OFFSET_SCROLLTABLE + (16 * echr) + eb] = Levels[echr + 5][0].ScrollTable[eb];
-		}
-	}
-	
-	//	Levels 1 & 3 overhead
-	for(eb = 0; eb < 16; eb++)
-	{
-		OutRom[OFFSET_BANK_1 + OFFSET_SCROLLTABLE + 48 + eb] = Levels[0][1].ScrollTable[eb];
-		OutRom[OFFSET_BANK_1 + OFFSET_SCROLLTABLE + 64 + eb] = Levels[2][1].ScrollTable[eb];
-	}
-	
-	//	Levels 2, 5-8 overhead
-	for(eb = 0; eb < 16; eb++)
-	{	
-		OutRom[OFFSET_BANK_2 + OFFSET_SCROLLTABLE + eb] = Levels[4][1].ScrollTable[eb];
-		OutRom[OFFSET_BANK_2 + OFFSET_SCROLLTABLE + eb + 16] = Levels[1][1].ScrollTable[eb];
-		OutRom[OFFSET_BANK_2 + OFFSET_SCROLLTABLE + eb + 32] = Levels[5][1].ScrollTable[eb];
-		OutRom[OFFSET_BANK_2 + OFFSET_SCROLLTABLE + eb + 48] = Levels[7][1].ScrollTable[eb];
-		OutRom[OFFSET_BANK_2 + OFFSET_SCROLLTABLE + eb + 64] = Levels[3][1].ScrollTable[eb];
-		OutRom[OFFSET_BANK_2 + OFFSET_SCROLLTABLE + eb + 80] = Levels[6][1].ScrollTable[eb];
-	}
-	*/
+
 }
 
 //	Assemble all of the data pointers for each level.  The location of the
@@ -299,4 +263,64 @@ void build_LevelDataPointers(unsigned char * OutRom)
 	}
 	
 	
+}
+
+
+unsigned short build_MapData(unsigned char * mapmeta, Level * level, unsigned char highblock, SerializedMapInfo * smi)
+{
+	unsigned char highsb = 0x00;
+	unsigned char highusb = 0x00;
+	
+	int pos = 0;
+	int x;
+	int y;
+	
+	for(x = 0; x <= highblock; x++)
+	{
+		for(y = 0; y < 4; y++)
+		{
+			mapmeta[(x * 4) + y] = (unsigned char)(*level).Blocks[x][y];
+			if(mapmeta[(x * 4) + y] > highsb) { highsb = mapmeta[(x * 4) + y]; }
+		}
+	}
+	
+	pos = highblock * 4;
+	//*blocksize = highblock * 4;
+	smi->BlockSize = highblock * 4;
+	
+	for(x = 0; x <= highsb; x++)
+	{
+		for(y = 0; y < 4; y++)
+		{
+			mapmeta[pos + (x * 4) + y] = (unsigned char)(*level).SubBlocks[x][y];
+			if(mapmeta[pos + (x * 4) + y] > highusb) { highusb = mapmeta[pos + (x * 4) + y]; }
+		}
+	}
+	
+	pos += highsb * 4;
+	//*subblocksize = highsb * 4;
+	smi->SubBlockSize = highsb * 4;
+	
+	for(x = 0; x <= highusb; x++)
+	{
+		for(y = 0; y < 4; y++)
+		{
+			mapmeta[pos + (x * 4) + y] = (unsigned char)(*level).UltraSubBlocks[x][y];
+		}
+	}
+	
+	pos += highusb * 4;
+	//*usbsize = highusb * 4;
+	smi->USBSize = highusb * 4;
+	
+	for(x = 0; x <= highusb; x++)
+	{
+		mapmeta[pos + x] = level_USBAttributeToByte(&(*level).USBAttributeTable[x]);
+	}
+	
+	pos += highusb;
+	//*usbattrsize = highusb;
+	smi->USBAttrSize = highusb;
+	
+	return pos;
 }

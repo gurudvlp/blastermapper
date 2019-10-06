@@ -166,3 +166,27 @@ unsigned char level_MapToBytes(unsigned char * mapdata, Level * level)
 	
 	return highid;
 }
+
+
+unsigned char level_USBAttributeToByte(USBAttributes * usbattr)
+{
+	unsigned char tbyte = 0x00;
+	
+	if((*usbattr).gateway) { tbyte |= 0x08; }
+	if((*usbattr).tunnel) { tbyte |= 0x0C; }
+	if((*usbattr).damaging) { tbyte |= 0x10; }
+	if((*usbattr).softladder) { tbyte |= 0x20; }
+	if((*usbattr).water) { tbyte |= 0x40; }
+	if((*usbattr).solid) { tbyte |= 0x80; }
+	if((*usbattr).lava) { tbyte |= 0x50; }
+	if((*usbattr).solidladder) { tbyte |= 0xA0; }
+	if((*usbattr).destroyable) { tbyte |= 0xC0; }
+	if((*usbattr).doorway) { tbyte |= 0x88; }
+	if((*usbattr).waterladder) { tbyte |= 0x60; }
+	if((*usbattr).overhang) { tbyte |= 0x04; }
+	if((*usbattr).ice) { tbyte |= 0x14; }
+	
+	tbyte |= (*usbattr).subpalette;
+	
+	return tbyte;
+}
