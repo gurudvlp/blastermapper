@@ -157,3 +157,110 @@ void build_SubPalettes(Level * level, unsigned char * spbytes)
 		spbytes[(esp * 4) + 3] = level->SubPalettes[esp].color3;
 	}
 }
+
+void build_Maps(unsigned char * OutRom)
+{
+	
+}
+
+void build_ScrollTables(unsigned char * OutRom)
+{
+	//	The levels in the game aren't saved in order, so here is an array that
+	//	specifies the order in which they are saved.
+	unsigned short levelorder[] = { 0, 1, 2, 3, 4, 5, 6, 7, 0, 2, 4, 1, 5, 7, 3, 6 };
+	
+	unsigned short cnt;
+	unsigned short levinbank = 0;
+	unsigned char bytes[2];
+	unsigned short addbank = 0;
+	
+	for(cnt = 0; cnt < 16; cnt++)
+	{
+		OutRomAddressToBytes(OFFSET_SCROLLTABLE + 0x8000 - 0x10 + (levelorder[cnt] * 16), (unsigned char *)&bytes);
+		OutRom[SIZE_ROM_HEADER + (4 * levinbank) + 2] = bytes[0];
+		OutRom[SIZE_ROM_HEADER + (4 * levinbank) + 3] = bytes[1];
+		
+		//	Because the first two banks each store 5 Areas of data, and the third
+		//	bank stores 6 Areas, we have to do a little checking to see where
+		//	to save data.
+		levinbank++;
+		if(cnt == 4) { levinbank = 0; addbank++; }
+		if(cnt == 9) { levinbank = 0; addbank++; }
+		cnt++;
+	}
+	
+	
+	/*
+	
+	//	Level 1 scroll table pointer
+	OutRomAddressToBytes(OFFSET_SCROLLTABLE + 0x8000 - 0x10, (unsigned char *)&bytes);
+	OutRom[SIZE_ROM_HEADER + 2] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 3] =  bytes[1];
+	
+	
+	//	Level 6 scroll table pointer
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 2] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 3] = bytes[1];
+	
+	//	Level 5o scroll table pointer
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 2] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 3] = bytes[1];
+	
+	//	Level 2 scroll table pointer
+	OutRomAddressToBytes(OFFSET_SCROLLTABLE + 16 + 0x8000, (unsigned char *)&bytes);
+	OutRom[SIZE_ROM_HEADER + 6] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 7] = bytes[1];
+	
+	//	Level 7 scroll table pointer
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 6] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 7] = bytes[1];
+	
+	//	Level 2o scroll table pointer
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 6] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 7] = bytes[1];
+	
+	//	Level 3 scroll table pointer
+	OutRomAddressToBytes(OFFSET_SCROLLTABLE + 32 + 0x8000, (unsigned char *)&bytes);
+	OutRom[SIZE_ROM_HEADER + 10] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 11] = bytes[1];
+	
+	//	Level 8 scroll table pointer
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 10] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 11] = bytes[1];
+	
+	//	Level 6o scroll table pointer
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 10] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 11] = bytes[1];
+	
+	//	Level 4 scroll table pointer
+	OutRomAddressToBytes(OFFSET_SCROLLTABLE + 48 + 0x8000, (unsigned char *)&bytes);
+	OutRom[SIZE_ROM_HEADER + 14] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 15] = bytes[1];
+	
+	//	Level 1o scroll table pointer
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 14] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 15] = bytes[1];
+	
+	//	Level 8o scroll table pointer
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 14] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 15] = bytes[1];
+	
+	//	Level 5 scroll table pointer
+	OutRomAddressToBytes(OFFSET_SCROLLTABLE + 64 + 0x8000,(unsigned char *) &bytes);
+	OutRom[SIZE_ROM_HEADER + 18] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 19] = bytes[1];
+	
+	//	Level 3o scroll table pointer
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 18] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x4000 + 19] = bytes[1];
+	
+	//	Level 4o scroll table pointer
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 18] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 19] = bytes[0];
+	
+	//	Level 7o scroll table pointer
+	OutRomAddressToBytes(OFFSET_SCROLLTABLE + 80 + 0x8000, (unsigned char *)&bytes);
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 22] = bytes[0];
+	OutRom[SIZE_ROM_HEADER + 0x8000 + 23] = bytes[1];
+	*/
+}

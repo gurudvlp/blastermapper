@@ -22,6 +22,9 @@
 #define OFFSET_BANK_3 0xC000
 
 #define OFFSET_PALETTE 0x0092 + SIZE_ROM_HEADER
+#define OFFSET_SCROLLTABLE 0x00F2 + SIZE_ROM_HEADER
+#define OFFSET_MAP 0x0152 + SIZE_ROM_HEADER
+#define OFFSET_MAPDATA 0x1660 + SIZE_ROM_HEADER
 
 typedef struct
 {
@@ -40,11 +43,11 @@ unsigned char USBAttributeToByte(USBAttributes * usbattr);
 void BuildSubPalettes(Level * level, unsigned char * spbytes);
 void BuildMapPointers(Level * level, unsigned short startloc, SerializedMapInfo * smi, unsigned char * outbuf);
 
-unsigned short Out_PaletteOffset;
-unsigned short Out_MapOffset;
-unsigned short Out_OvMapOffset;
-unsigned short Out_MapDataOffset;
-unsigned short Out_OvMapDataOffset;
+//unsigned short Out_PaletteOffset;
+//unsigned short Out_MapOffset;
+//unsigned short Out_OvMapOffset;
+//unsigned short Out_MapDataOffset;
+//unsigned short Out_OvMapDataOffset;
 unsigned short Out_LevelPointersOffset;
 unsigned short Out_ROMLevelPointerAddr;
 
