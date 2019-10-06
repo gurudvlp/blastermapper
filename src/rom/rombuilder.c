@@ -171,7 +171,7 @@ void build_ScrollTables(unsigned char * OutRom)
 {
 	//	The levels in the game aren't saved in order, so here is an array that
 	//	specifies the order in which they are saved.
-	unsigned short levelorder[] = { 0, 1, 2, 3, 4, 5, 6, 7, 0, 2, 4, 1, 5, 7, 3, 6 };
+	//unsigned short levelorder[] = { 0, 1, 2, 3, 4, 5, 6, 7, 0, 2, 4, 1, 5, 7, 3, 6 };
 	
 	unsigned short cnt;
 	unsigned short levinbank = 0;
@@ -181,7 +181,7 @@ void build_ScrollTables(unsigned char * OutRom)
 	for(cnt = 0; cnt < 16; cnt++)
 	{
 		OutRomAddressToBytes(
-			OFFSET_SCROLLTABLE + 0x8000 - SIZE_ROM_HEADER + (levelorder[cnt] * levinbank),
+			OFFSET_SCROLLTABLE + 0x8000 - SIZE_ROM_HEADER + (levinbank * 16)/*(levelorder[cnt] * levinbank)*/,
 			(unsigned char *)&bytes
 		);
 		
