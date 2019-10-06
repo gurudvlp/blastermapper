@@ -5,6 +5,7 @@
 #include "loadrom.h"
 #include "saverom.h"
 #include "rombuilder.h"
+#include "../level/levelinfo.h"
 
 void build_SubPalettes(Level * level, unsigned char * spbytes);
 
@@ -145,9 +146,35 @@ void build_SubPalettes(Level * level, unsigned char * spbytes)
 	}
 }
 
-void build_Maps(unsigned char * OutRom)
+//	Assemble the binary map data.  This will convert the Level structs map
+//	data to binary, write it to the OutRom, and also keep track of the highest
+//	block id for each Area.
+//
+//	unsigned char * OutRom
+//		The rom being built
+//
+//	unsigned char * highblock
+//		An array of 16 bytes.  Each byte is a value from 0 to 255 that
+//		represents the highest block id for each successive Area
+void build_Maps(unsigned char * OutRom, unsigned char * highblock)
 {
+	unsigned short levelorder[] = { 0, 1, 2, 3, 4, 5, 6, 7, 0, 2, 4, 1, 5, 7, 3, 6 };
+	unsigned short cnt;
+	unsigned short levinbank = 0;
+	unsigned short addbank = 0;
 	
+	for(cnt = 0; cnt < 16; cnt++)
+	{
+		highblock[cnt] = level_MapToBytes(
+			&OutRom[OFFSET_MAP + (SIZE_MAP * levinbank) + (addbank * SIZE_PRG_BANK)],
+			&Levels[levelorder[cnt]][(cnt < 8) ? 0 : 1]
+		);
+		
+		levinbank++;
+		if(cnt == 4) { levinbank = 0; addbank++; }
+		if(cnt == 9) { levinbank = 0; addbank++; }
+	}
+
 }
 
 void build_ScrollTables(unsigned char * OutRom)

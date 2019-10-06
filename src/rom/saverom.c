@@ -80,27 +80,11 @@ bool SaveRom()
 	
 	//	Onto the map.  We need the actual map data, and also the highest block id
 	unsigned char highblock[16];
+	build_Maps(OutRom, highblock);
 	
 	unsigned short datasize[16];
 	
-	highblock[0] = MapToBytes(&OutRom[OFFSET_MAP], &Levels[0][0]);
-	highblock[1] = MapToBytes(&OutRom[OFFSET_MAP + 0x0400], &Levels[1][0]);
-	highblock[2] = MapToBytes(&OutRom[OFFSET_MAP + 0x0800], &Levels[2][0]);
-	highblock[3] = MapToBytes(&OutRom[OFFSET_MAP + 0x0C00], &Levels[3][0]);
-	highblock[4] = MapToBytes(&OutRom[OFFSET_MAP + 0x1000], &Levels[4][0]);
 	
-	highblock[5] = MapToBytes(&OutRom[OFFSET_MAP + 0x4000], &Levels[5][0]);
-	highblock[6] = MapToBytes(&OutRom[OFFSET_MAP + 0x4400], &Levels[6][0]);
-	highblock[7] = MapToBytes(&OutRom[OFFSET_MAP + 0x4800], &Levels[7][0]);
-	highblock[8] = MapToBytes(&OutRom[OFFSET_MAP + 0x4C00], &Levels[0][1]);
-	highblock[9] = MapToBytes(&OutRom[OFFSET_MAP + 0x5000], &Levels[2][1]);
-	
-	highblock[10] = MapToBytes(&OutRom[OFFSET_MAP + 0x8000], &Levels[4][1]);
-	highblock[11] = MapToBytes(&OutRom[OFFSET_MAP + 0x8400], &Levels[1][1]);
-	highblock[12] = MapToBytes(&OutRom[OFFSET_MAP + 0x8800], &Levels[5][1]);
-	highblock[13] = MapToBytes(&OutRom[OFFSET_MAP + 0x8C00], &Levels[7][1]);
-	highblock[14] = MapToBytes(&OutRom[OFFSET_MAP + 0x9000], &Levels[3][1]);
-	highblock[15] = MapToBytes(&OutRom[OFFSET_MAP + 0x9400], &Levels[6][1]);
 
 	
 	//	Build map data for each level.  This can be variable sizes, so that
@@ -207,9 +191,10 @@ bool SaveRom()
 		else { OutRom[0xF12E + echr] = 0x69; }
 	}*/
 	
+	
 	//	Now onto the actual saving of the file
 	FILE *outfile = fopen("blasterout.nes", "w");
-	//fputs((char *)&OutRom[0], outfile);
+	
 	fwrite((char *)&OutRom[0], SIZE_ROM_HEADER, 1, outfile);
 	fwrite((char *)&OutRom[SIZE_ROM_HEADER], SIZE_PRG_BANK, 16, outfile);
 	fclose(outfile);
@@ -225,22 +210,7 @@ void OutRomAddressToBytes(unsigned short addr, unsigned char * bytes)
 	bytes[1] = (addr >> 8) & 0xFF;
 }
 
-unsigned char MapToBytes(unsigned char * mapdata, Level * level)
-{
-	unsigned char highid = 0x00;
-	int x, y;
-	
-	for(y = 0; y < 32; y++)
-	{
-		for(x = 0; x < 32; x++)
-		{
-			mapdata[x + (y * 32)] = (*level).Map[x][y];
-			if((*level).Map[x][y] > highid) { highid = (*level).Map[x][y]; }
-		}
-	}
-	
-	return highid;
-}
+
 
 //unsigned short BuildMapData(unsigned char * mapmeta, Level * level,  unsigned char highblock, unsigned short * blocksize, unsigned short * subblocksize, unsigned short * usbsize, unsigned short * usbattrsize)
 unsigned short BuildMapData(unsigned char * mapmeta, Level * level, unsigned char highblock, SerializedMapInfo * smi)

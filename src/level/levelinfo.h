@@ -13,6 +13,7 @@ unsigned char BlockClipboard;
 void SetSpawnPoint(int lvl, int lvlmode, int x, int y);
 void PrintSpawnPoints();
 short GetThingAt(int lvl, int lvlmode, int x, int y);
+unsigned char level_MapToBytes(unsigned char * mapdata, Level * level);
 
 GLuint darkenTextureID;
 GLuint spawnPointTextureID;

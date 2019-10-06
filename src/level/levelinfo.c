@@ -138,3 +138,31 @@ short GetThingAt(int lvl, int lvlmode, int x, int y)
 	
 	return -1;
 }
+
+//	level_MapToBytes will take the map stored in the Level struct and convert
+//	it to the binary format that the game can actually use.
+//
+//	unsigned char * mapdata
+//		Where to store the binary map data.  This must be at least 1024 bytes.
+//
+//	Level * level
+//		Pointer to the level that contains the map that should be converted to
+//		binary.  This can be an overhead or side-view level.
+//
+//	Returns: The highest block id found on this map.
+unsigned char level_MapToBytes(unsigned char * mapdata, Level * level)
+{
+	unsigned char highid = 0x00;
+	int x, y;
+	
+	for(y = 0; y < 32; y++)
+	{
+		for(x = 0; x < 32; x++)
+		{
+			mapdata[x + (y * 32)] = (*level).Map[x][y];
+			if((*level).Map[x][y] > highid) { highid = (*level).Map[x][y]; }
+		}
+	}
+	
+	return highid;
+}

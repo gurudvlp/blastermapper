@@ -10,6 +10,7 @@
 #define SIZE_ROM_HEADER 16
 #define SIZE_PALETTE 16
 #define SIZE_LEVELDATAPOINTERS 12
+#define SIZE_MAP 0x0400
 
 #define COUNT_PRG_BANK 8
 #define COUNT_CHR_BANK 16
@@ -38,7 +39,6 @@ typedef struct
 
 bool SaveRom();
 void OutRomAddressToBytes(unsigned short addr, unsigned char * bytes);
-unsigned char MapToBytes(unsigned char * mapdata, Level * level);
 //unsigned short BuildMapData(unsigned char * mapmeta, Level * level,  unsigned char highblock, unsigned short * blocksize, unsigned short * subblocksize, unsigned short * usbsize, unsigned short * usbattrsize);
 unsigned short BuildMapData(unsigned char * mapmeta, Level * level, unsigned char highblock, SerializedMapInfo * smi);
 unsigned char USBAttributeToByte(USBAttributes * usbattr);
