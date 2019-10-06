@@ -181,12 +181,15 @@ void build_ScrollTables(unsigned char * OutRom)
 {
 	//	The levels in the game aren't saved in order, so here is an array that
 	//	specifies the order in which they are saved.
-	//unsigned short levelorder[] = { 0, 1, 2, 3, 4, 5, 6, 7, 0, 2, 4, 1, 5, 7, 3, 6 };
+	unsigned short levelorder[] = { 0, 1, 2, 3, 4, 5, 6, 7, 0, 2, 4, 1, 5, 7, 3, 6 };
 	
 	unsigned short cnt;
 	unsigned short levinbank = 0;
 	unsigned char bytes[2];
 	unsigned short addbank = 0;
+	unsigned short eb;
+	
+	//	First, build all of the scroll table pointers.
 	
 	for(cnt = 0; cnt < 16; cnt++)
 	{
@@ -195,8 +198,8 @@ void build_ScrollTables(unsigned char * OutRom)
 			(unsigned char *)&bytes
 		);
 		
-		OutRom[SIZE_ROM_HEADER + (4 * levinbank) + 2] = bytes[0];
-		OutRom[SIZE_ROM_HEADER + (4 * levinbank) + 3] = bytes[1];
+		OutRom[SIZE_ROM_HEADER + (4 * levinbank) + (SIZE_PRG_BANK * addbank) + 2] = bytes[0];
+		OutRom[SIZE_ROM_HEADER + (4 * levinbank) + (SIZE_PRG_BANK * addbank) + 3] = bytes[1];
 		
 		//	Because the first two banks each store 5 Areas of data, and the third
 		//	bank stores 6 Areas, we have to do a little checking to see where
@@ -204,9 +207,61 @@ void build_ScrollTables(unsigned char * OutRom)
 		levinbank++;
 		if(cnt == 4) { levinbank = 0; addbank++; }
 		if(cnt == 9) { levinbank = 0; addbank++; }
-		//cnt++;
 	}
-
+	
+	//	Now, the actual scroll tables need to be built.
+	levinbank = 0;
+	addbank = 0;
+	
+	for(cnt = 0; cnt < 16; cnt++)
+	{
+		for(eb = 0; eb < SIZE_SCROLLTABLE; eb++)
+		{
+			OutRom[OFFSET_SCROLLTABLE + (SIZE_SCROLLTABLE * levinbank) + (SIZE_PRG_BANK * addbank) + eb] = 
+				Levels[levelorder[cnt]][(cnt < 8) ? 0 : 1].ScrollTable[eb];
+		}
+		
+		levinbank++;
+		if(cnt == 4) { levinbank = 0; addbank++; }
+		if(cnt == 9) { levinbank = 0; addbank++; }
+	}
+/*	
+	//	Levels 1-5 tank
+	for(echr = 0; echr < 5; echr++)
+	{
+		for(eb = 0; eb < 16; eb++)
+		{
+			OutRom[OFFSET_SCROLLTABLE + (16 * echr) + eb] = Levels[echr][0].ScrollTable[eb];
+		}
+	}
+	
+	//	Levels 6-8 tank
+	for(echr = 0; echr < 3; echr++)
+	{
+		for(eb = 0; eb < 16; eb++)
+		{
+			OutRom[OFFSET_BANK_1 + OFFSET_SCROLLTABLE + (16 * echr) + eb] = Levels[echr + 5][0].ScrollTable[eb];
+		}
+	}
+	
+	//	Levels 1 & 3 overhead
+	for(eb = 0; eb < 16; eb++)
+	{
+		OutRom[OFFSET_BANK_1 + OFFSET_SCROLLTABLE + 48 + eb] = Levels[0][1].ScrollTable[eb];
+		OutRom[OFFSET_BANK_1 + OFFSET_SCROLLTABLE + 64 + eb] = Levels[2][1].ScrollTable[eb];
+	}
+	
+	//	Levels 2, 5-8 overhead
+	for(eb = 0; eb < 16; eb++)
+	{	
+		OutRom[OFFSET_BANK_2 + OFFSET_SCROLLTABLE + eb] = Levels[4][1].ScrollTable[eb];
+		OutRom[OFFSET_BANK_2 + OFFSET_SCROLLTABLE + eb + 16] = Levels[1][1].ScrollTable[eb];
+		OutRom[OFFSET_BANK_2 + OFFSET_SCROLLTABLE + eb + 32] = Levels[5][1].ScrollTable[eb];
+		OutRom[OFFSET_BANK_2 + OFFSET_SCROLLTABLE + eb + 48] = Levels[7][1].ScrollTable[eb];
+		OutRom[OFFSET_BANK_2 + OFFSET_SCROLLTABLE + eb + 64] = Levels[3][1].ScrollTable[eb];
+		OutRom[OFFSET_BANK_2 + OFFSET_SCROLLTABLE + eb + 80] = Levels[6][1].ScrollTable[eb];
+	}
+	*/
 }
 
 //	Assemble all of the data pointers for each level.  The location of the

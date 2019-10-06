@@ -13,64 +13,13 @@ bool SaveRom()
 	//
 	//	See docs/Rom Layout.txt for an explanation of how the ROM is laid out.
 	
-	int eb;
-	unsigned short echr;
-	
-	unsigned char  * OutRom = build_InitializeRom();
+	unsigned char * OutRom = build_InitializeRom();
 	
 	build_CopyProgramming(OutRom);
 	build_SpawnPoints(OutRom);
 	build_Palettes(OutRom);
 	build_ScrollTables(OutRom);
 	build_LevelDataPointers(OutRom);
-	
-	//	Start with each set of data pointers for level data
-	//	overhead levels 2, 5-8 are in bank 2,
-	//	ordered like 5, 2, 6, 8, 4, 7
-
-
-	
-	////////////////////////////////////////////////////////////////////////////
-	//
-	//	Now to build the scroll tables for each level
-	//
-	
-	//	Levels 1-5 tank
-	for(echr = 0; echr < 5; echr++)
-	{
-		for(eb = 0; eb < 16; eb++)
-		{
-			OutRom[OFFSET_SCROLLTABLE + (16 * echr) + eb] = Levels[echr][0].ScrollTable[eb];
-		}
-	}
-	
-	//	Levels 6-8 tank
-	for(echr = 0; echr < 3; echr++)
-	{
-		for(eb = 0; eb < 16; eb++)
-		{
-			OutRom[OFFSET_BANK_1 + OFFSET_SCROLLTABLE + (16 * echr) + eb] = Levels[echr + 5][0].ScrollTable[eb];
-		}
-	}
-	
-	//	Levels 1 & 3 overhead
-	for(eb = 0; eb < 16; eb++)
-	{
-		OutRom[OFFSET_BANK_1 + OFFSET_SCROLLTABLE + 48 + eb] = Levels[0][1].ScrollTable[eb];
-		OutRom[OFFSET_BANK_1 + OFFSET_SCROLLTABLE + 64 + eb] = Levels[2][1].ScrollTable[eb];
-	}
-	
-	//	Levels 2, 5-8 overhead
-	for(eb = 0; eb < 16; eb++)
-	{	
-		OutRom[OFFSET_BANK_2 + OFFSET_SCROLLTABLE + eb] = Levels[4][1].ScrollTable[eb];
-		OutRom[OFFSET_BANK_2 + OFFSET_SCROLLTABLE + eb + 16] = Levels[1][1].ScrollTable[eb];
-		OutRom[OFFSET_BANK_2 + OFFSET_SCROLLTABLE + eb + 32] = Levels[5][1].ScrollTable[eb];
-		OutRom[OFFSET_BANK_2 + OFFSET_SCROLLTABLE + eb + 48] = Levels[7][1].ScrollTable[eb];
-		OutRom[OFFSET_BANK_2 + OFFSET_SCROLLTABLE + eb + 64] = Levels[3][1].ScrollTable[eb];
-		OutRom[OFFSET_BANK_2 + OFFSET_SCROLLTABLE + eb + 80] = Levels[6][1].ScrollTable[eb];
-	}
-	
 	
 	
 	////////////////////////////////////////////////////////////////////////////
