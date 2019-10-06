@@ -163,6 +163,10 @@ void build_Maps(unsigned char * OutRom)
 	unsigned short levinbank = 0;
 	unsigned short addbank = 0;
 	unsigned char highblock[16];
+	unsigned short ttlsize = 0;
+	unsigned short datasize[16];
+	
+	SerializedMapInfo smi[16];
 	
 	for(cnt = 0; cnt < 16; cnt++)
 	{
@@ -172,9 +176,27 @@ void build_Maps(unsigned char * OutRom)
 			&Levels[levelorder[cnt]][(cnt < 8) ? 0 : 1]
 		);
 		
+		//	Build all of the blocks, sub blocks and ultra sub blocks
+		datasize[cnt] = build_MapData(
+			&OutRom[OFFSET_MAPDATA + ttlsize + (addbank * SIZE_PRG_BANK)],
+			&Levels[levelorder[cnt]][(cnt < 8) ? 0 : 1],
+			highblock[cnt],
+			&smi[cnt]
+		);
+		
+		//	Build all of the pointers to the above
+		build_MapPointers(
+			&Levels[levelorder[cnt]][(cnt < 8) ? 0 : 1],
+			OFFSET_MAPDATA - SIZE_ROM_HEADER + ttlsize,
+			&smi[cnt],
+			&OutRom[OFFSET_LEVELDATAPOINTERS + (SIZE_LEVELDATAPOINTERS * levinbank) + (addbank * SIZE_PRG_BANK)]
+		);
+		
+		ttlsize += datasize[cnt];
+		
 		levinbank++;
-		if(cnt == 4) { levinbank = 0; addbank++; }
-		if(cnt == 9) { levinbank = 0; addbank++; }
+		if(cnt == 4) { levinbank = 0; ttlsize = 0; addbank++; }
+		if(cnt == 9) { levinbank = 0; ttlsize = 0; addbank++; }
 	}
 
 
@@ -193,81 +215,37 @@ void build_Maps(unsigned char * OutRom)
 	
 	//	Levels 1-5 tank
 	//unsigned short nextstart = 0x1640;
-	unsigned short ttlsize = 0;
+	/*unsigned short ttlsize = 0;
 	unsigned short datasize[16];
 	
 	SerializedMapInfo smi[16];
 	
-	//	Areas 1-5 Tank
-	datasize[0] = build_MapData(&OutRom[OFFSET_MAPDATA], &Levels[0][0], highblock[0], &smi[0]);
-	build_MapPointers(&Levels[0][0], OFFSET_MAPDATA - SIZE_ROM_HEADER, &smi[0], &OutRom[0x30]);
-	ttlsize += datasize[0];
+	levinbank = 0;
+	addbank = 0;
 	
-	datasize[1] = build_MapData(&OutRom[OFFSET_MAPDATA + ttlsize], &Levels[1][0], highblock[1], &smi[1]);
-	build_MapPointers(&Levels[1][0], OFFSET_MAPDATA - SIZE_ROM_HEADER + ttlsize, &smi[1], &OutRom[0x30 + 12]);
-	ttlsize += datasize[1];
+	for(cnt = 0; cnt < 16; cnt++)
+	{
+		datasize[cnt] = build_MapData(
+			&OutRom[OFFSET_MAPDATA + ttlsize + (addbank * SIZE_PRG_BANK)],
+			&Levels[levelorder[cnt]][(cnt < 8) ? 0 : 1],
+			highblock[cnt],
+			&smi[cnt]
+		);
+		
+		build_MapPointers(
+			&Levels[levelorder[cnt]][(cnt < 8) ? 0 : 1],
+			OFFSET_MAPDATA - SIZE_ROM_HEADER + ttlsize,
+			&smi[cnt],
+			&OutRom[OFFSET_LEVELDATAPOINTERS + (SIZE_LEVELDATAPOINTERS * levinbank) + (addbank * SIZE_PRG_BANK)]
+		);
+		
+		ttlsize += datasize[cnt];
+		levinbank++;
+		
+		if(cnt == 4) { ttlsize = 0; addbank++; levinbank = 0; }
+		if(cnt == 9) { ttlsize = 0; addbank++; levinbank = 0; }
+	}*/
 	
-	datasize[2] = build_MapData(&OutRom[OFFSET_MAPDATA + ttlsize], &Levels[2][0], highblock[2], &smi[2]);
-	build_MapPointers(&Levels[2][0], OFFSET_MAPDATA - SIZE_ROM_HEADER + ttlsize, &smi[2], &OutRom[0x30 + 24]);
-	ttlsize += datasize[2];
-	
-	datasize[3] = build_MapData(&OutRom[OFFSET_MAPDATA + ttlsize], &Levels[3][0], highblock[3], &smi[3]);
-	build_MapPointers(&Levels[3][0], OFFSET_MAPDATA - SIZE_ROM_HEADER + ttlsize, &smi[3], &OutRom[0x30 + 36]);
-	ttlsize += datasize[3];
-	
-	datasize[4] = build_MapData(&OutRom[OFFSET_MAPDATA + ttlsize], &Levels[4][0], highblock[4], &smi[4]);
-	build_MapPointers(&Levels[4][0], OFFSET_MAPDATA - SIZE_ROM_HEADER + ttlsize, &smi[4], &OutRom[0x30 + 48]);
-	ttlsize += datasize[4];
-	
-	//	Levels 6-8 tank
-	ttlsize = 0;
-	datasize[5] = build_MapData(&OutRom[OFFSET_MAPDATA + 0x4000], &Levels[5][0], highblock[5], &smi[5]);
-	build_MapPointers(&Levels[5][0], OFFSET_MAPDATA - SIZE_ROM_HEADER + ttlsize, &smi[5], &OutRom[0x4030]);
-	ttlsize += datasize[5];
-	
-	datasize[6] = build_MapData(&OutRom[OFFSET_MAPDATA + 0x4000 + ttlsize], &Levels[6][0], highblock[6], &smi[6]);
-	build_MapPointers(&Levels[6][0], OFFSET_MAPDATA - SIZE_ROM_HEADER + ttlsize, &smi[6], &OutRom[0x4030 + 12]);
-	ttlsize += datasize[6];
-	
-	datasize[7] = build_MapData(&OutRom[OFFSET_MAPDATA + 0x4000 + ttlsize], &Levels[7][0], highblock[7], &smi[7]);
-	build_MapPointers(&Levels[7][0], OFFSET_MAPDATA - SIZE_ROM_HEADER + ttlsize, &smi[7], &OutRom[0x4030 + 24]);
-	ttlsize += datasize[7];
-	
-	//	Levels 1, 3 overhead
-	datasize[8] = build_MapData(&OutRom[OFFSET_MAPDATA + 0x4000 + ttlsize], &Levels[0][1], highblock[8], &smi[8]);
-	build_MapPointers(&Levels[0][1], OFFSET_MAPDATA - SIZE_ROM_HEADER + ttlsize, &smi[8], &OutRom[0x4030 + 36]);
-	ttlsize += datasize[8];
-	
-	datasize[9] = build_MapData(&OutRom[OFFSET_MAPDATA + 0x4000 + ttlsize], &Levels[2][1], highblock[9], &smi[9]);
-	build_MapPointers(&Levels[2][1], OFFSET_MAPDATA - SIZE_ROM_HEADER + ttlsize, &smi[9], &OutRom[0x4030 + 48]);
-	ttlsize += datasize[9];
-	
-	
-	//	Levels 2, 4-8 overhead
-	ttlsize = 0;
-	datasize[10] = build_MapData(&OutRom[OFFSET_MAPDATA + 0x8000], &Levels[4][1], highblock[10], &smi[10]);
-	build_MapPointers(&Levels[4][1], OFFSET_MAPDATA - SIZE_ROM_HEADER + ttlsize, &smi[10], &OutRom[0x8030]);
-	ttlsize += datasize[10];
-	
-	datasize[11] = build_MapData(&OutRom[OFFSET_MAPDATA + 0x8000 + ttlsize], &Levels[1][1], highblock[11], &smi[11]);
-	build_MapPointers(&Levels[1][1], OFFSET_MAPDATA - SIZE_ROM_HEADER + ttlsize, &smi[11], &OutRom[0x8030 + 12]);
-	ttlsize += datasize[11];
-	
-	datasize[12] = build_MapData(&OutRom[OFFSET_MAPDATA + 0x8000 + ttlsize], &Levels[5][1], highblock[12], &smi[12]);
-	build_MapPointers(&Levels[5][1], OFFSET_MAPDATA - SIZE_ROM_HEADER + ttlsize, &smi[12], &OutRom[0x8030 + 24]);
-	ttlsize += datasize[12];
-	
-	datasize[13] = build_MapData(&OutRom[OFFSET_MAPDATA + 0x8000 + ttlsize], &Levels[7][1], highblock[13], &smi[13]);
-	build_MapPointers(&Levels[7][1], OFFSET_MAPDATA - SIZE_ROM_HEADER + ttlsize, &smi[13], &OutRom[0x8030 + 36]);
-	ttlsize += datasize[13];
-	
-	datasize[14] = build_MapData(&OutRom[OFFSET_MAPDATA + 0x8000 + ttlsize], &Levels[3][1], highblock[14], &smi[14]);
-	build_MapPointers(&Levels[3][1], OFFSET_MAPDATA - SIZE_ROM_HEADER + ttlsize, &smi[14], &OutRom[0x8030 + 48]);
-	ttlsize += datasize[14];
-	
-	datasize[15] = build_MapData(&OutRom[OFFSET_MAPDATA + 0x8000 + ttlsize], &Levels[6][1], highblock[15], &smi[15]);
-	build_MapPointers(&Levels[6][1], OFFSET_MAPDATA - SIZE_ROM_HEADER + ttlsize, &smi[15], &OutRom[0x8030 + 60]);
-	ttlsize += datasize[15];
 }
 
 void build_ScrollTables(unsigned char * OutRom)

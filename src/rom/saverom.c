@@ -51,8 +51,3 @@ void OutRomAddressToBytes(unsigned short addr, unsigned char * bytes)
 	bytes[0] = addr & 0xFF;
 	bytes[1] = (addr >> 8) & 0xFF;
 }
-
-
-
-
-
