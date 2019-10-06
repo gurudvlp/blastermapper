@@ -71,12 +71,12 @@ void build_InsertWatermarks(unsigned char * OutRom)
 	OutRom[SIZE_ROM_HEADER + 0x19] = 0x02;
 	
 	//	Second bank watermark
-	OutRom[SIZE_ROM_HEADER + 0x14 + 0x4000] = 'L';
-	OutRom[SIZE_ROM_HEADER + 0x15 + 0x4000] = 'i';
-	OutRom[SIZE_ROM_HEADER + 0x16 + 0x4000] = 'n';
-	OutRom[SIZE_ROM_HEADER + 0x17 + 0x4000] = 'u';
-	OutRom[SIZE_ROM_HEADER + 0x18 + 0x4000] = 's';
-	OutRom[SIZE_ROM_HEADER + 0x19 + 0x4000] = 4;	
+	OutRom[SIZE_ROM_HEADER + 0x14 + OFFSET_BANK_1] = 'L';
+	OutRom[SIZE_ROM_HEADER + 0x15 + OFFSET_BANK_1] = 'i';
+	OutRom[SIZE_ROM_HEADER + 0x16 + OFFSET_BANK_1] = 'n';
+	OutRom[SIZE_ROM_HEADER + 0x17 + OFFSET_BANK_1] = 'u';
+	OutRom[SIZE_ROM_HEADER + 0x18 + OFFSET_BANK_1] = 's';
+	OutRom[SIZE_ROM_HEADER + 0x19 + OFFSET_BANK_1] = 4;	
 }
 
 void build_SpawnPoints(unsigned char * OutRom)
@@ -116,7 +116,7 @@ void build_Palettes(unsigned char * OutRom)
 		
 		oroff += OFFSET_PALETTE;
 		
-		printf("Writing Palette data for level %d:%d at addr:0x%04X\n", cnt, levelorder[cnt], oroff);
+		//printf("Writing Palette data for level %d:%d at addr:0x%04X\n", cnt, levelorder[cnt], oroff);
 		
 		build_SubPalettes(
 			(Level *)&Levels[levelorder[cnt]][(cnt < 8) ? 0 : 1],
@@ -130,24 +130,7 @@ void build_Palettes(unsigned char * OutRom)
 		if(cnt == 4) { levinbank = 0; }
 		if(cnt == 9) { levinbank = 0; }
 	}
-	/*build_SubPalettes((Level *)&Levels[0][0], &OutRom[OFFSET_PALETTE]);
-	build_SubPalettes((Level *)&Levels[1][0], &OutRom[OFFSET_PALETTE + SIZE_PALETTE]);
-	build_SubPalettes((Level *)&Levels[2][0], &OutRom[OFFSET_PALETTE + (SIZE_PALETTE * 2)]);
-	build_SubPalettes((Level *)&Levels[3][0], &OutRom[OFFSET_PALETTE + (SIZE_PALETTE * 3)]);
-	build_SubPalettes((Level *)&Levels[4][0], &OutRom[OFFSET_PALETTE + (SIZE_PALETTE * 4)]);
-	
-	build_SubPalettes((Level *)&Levels[5][0], &OutRom[OFFSET_PALETTE + 0x4000]);
-	build_SubPalettes((Level *)&Levels[6][0], &OutRom[OFFSET_PALETTE + 0x4010]);
-	build_SubPalettes((Level *)&Levels[7][0], &OutRom[OFFSET_PALETTE + 0x4020]);
-	build_SubPalettes((Level *)&Levels[0][1], &OutRom[OFFSET_PALETTE + 0x4030]);
-	build_SubPalettes((Level *)&Levels[2][1], &OutRom[OFFSET_PALETTE + 0x4040]);
-	
-	build_SubPalettes((Level *)&Levels[4][1], &OutRom[OFFSET_PALETTE + 0x8000]);
-	build_SubPalettes((Level *)&Levels[1][1], &OutRom[OFFSET_PALETTE + 0x8010]);
-	build_SubPalettes((Level *)&Levels[5][1], &OutRom[OFFSET_PALETTE + 0x8020]);
-	build_SubPalettes((Level *)&Levels[7][1], &OutRom[OFFSET_PALETTE + 0x8030]);
-	build_SubPalettes((Level *)&Levels[3][1], &OutRom[OFFSET_PALETTE + 0x8040]);
-	build_SubPalettes((Level *)&Levels[6][1], &OutRom[OFFSET_PALETTE + 0x8050]);*/
+
 }
 
 void build_SubPalettes(Level * level, unsigned char * spbytes)
@@ -194,81 +177,44 @@ void build_ScrollTables(unsigned char * OutRom)
 		levinbank++;
 		if(cnt == 4) { levinbank = 0; addbank++; }
 		if(cnt == 9) { levinbank = 0; addbank++; }
-		cnt++;
+		//cnt++;
+	}
+
+}
+
+//	Assemble all of the data pointers for each level.  The location of the
+//	pointers is hard coded into the ROM, but where they point to is a little bit
+//	more flexible.  The layout of the rebuilt ROM is described in the Rom Layout
+//	document.
+void build_LevelDataPointers(unsigned char * OutRom)
+{
+	unsigned short cnt;
+	unsigned short levinbank = 0;
+	unsigned char bytes[2];
+	unsigned short addbank = 0;
+	char txt[64];
+	
+	for(cnt = 0; cnt < 16; cnt++)
+	{
+		OutRomAddressToBytes(
+			(OFFSET_LEVELDATAPOINTERS - SIZE_ROM_HEADER + 0x8000) + (levinbank * 12),
+			(unsigned char *)&bytes
+		);
+		
+		//	Each level has two pointers stored at the start of the ROM.  There
+		//	is the pointer to the actual data pointers, and there is a pointer
+		//	to the scroll table.  This leaves us with (level in bank * 4 bytes)
+		OutRom[(4 * levinbank) + (addbank * SIZE_PRG_BANK) + SIZE_ROM_HEADER] = bytes[0];
+		OutRom[(4 * levinbank) + (addbank * SIZE_PRG_BANK) + SIZE_ROM_HEADER + 1] = bytes[1];
+		
+
+		sprintf(txt, "bank: %d   levinbank: %d", addbank, levinbank);
+		PrintLevelPointer(txt, (unsigned char *)&bytes);
+		
+		levinbank++;
+		if(cnt == 4) { levinbank = 0; addbank++; }
+		if(cnt == 9) { levinbank = 0; addbank++; }
 	}
 	
 	
-	/*
-	
-	//	Level 1 scroll table pointer
-	OutRomAddressToBytes(OFFSET_SCROLLTABLE + 0x8000 - 0x10, (unsigned char *)&bytes);
-	OutRom[SIZE_ROM_HEADER + 2] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 3] =  bytes[1];
-	
-	
-	//	Level 6 scroll table pointer
-	OutRom[SIZE_ROM_HEADER + 0x4000 + 2] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x4000 + 3] = bytes[1];
-	
-	//	Level 5o scroll table pointer
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 2] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 3] = bytes[1];
-	
-	//	Level 2 scroll table pointer
-	OutRomAddressToBytes(OFFSET_SCROLLTABLE + 16 + 0x8000, (unsigned char *)&bytes);
-	OutRom[SIZE_ROM_HEADER + 6] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 7] = bytes[1];
-	
-	//	Level 7 scroll table pointer
-	OutRom[SIZE_ROM_HEADER + 0x4000 + 6] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x4000 + 7] = bytes[1];
-	
-	//	Level 2o scroll table pointer
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 6] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 7] = bytes[1];
-	
-	//	Level 3 scroll table pointer
-	OutRomAddressToBytes(OFFSET_SCROLLTABLE + 32 + 0x8000, (unsigned char *)&bytes);
-	OutRom[SIZE_ROM_HEADER + 10] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 11] = bytes[1];
-	
-	//	Level 8 scroll table pointer
-	OutRom[SIZE_ROM_HEADER + 0x4000 + 10] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x4000 + 11] = bytes[1];
-	
-	//	Level 6o scroll table pointer
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 10] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 11] = bytes[1];
-	
-	//	Level 4 scroll table pointer
-	OutRomAddressToBytes(OFFSET_SCROLLTABLE + 48 + 0x8000, (unsigned char *)&bytes);
-	OutRom[SIZE_ROM_HEADER + 14] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 15] = bytes[1];
-	
-	//	Level 1o scroll table pointer
-	OutRom[SIZE_ROM_HEADER + 0x4000 + 14] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x4000 + 15] = bytes[1];
-	
-	//	Level 8o scroll table pointer
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 14] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 15] = bytes[1];
-	
-	//	Level 5 scroll table pointer
-	OutRomAddressToBytes(OFFSET_SCROLLTABLE + 64 + 0x8000,(unsigned char *) &bytes);
-	OutRom[SIZE_ROM_HEADER + 18] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 19] = bytes[1];
-	
-	//	Level 3o scroll table pointer
-	OutRom[SIZE_ROM_HEADER + 0x4000 + 18] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x4000 + 19] = bytes[1];
-	
-	//	Level 4o scroll table pointer
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 18] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 19] = bytes[0];
-	
-	//	Level 7o scroll table pointer
-	OutRomAddressToBytes(OFFSET_SCROLLTABLE + 80 + 0x8000, (unsigned char *)&bytes);
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 22] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 23] = bytes[1];
-	*/
 }

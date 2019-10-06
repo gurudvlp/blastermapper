@@ -22,113 +22,12 @@ bool SaveRom()
 	build_SpawnPoints(OutRom);
 	build_Palettes(OutRom);
 	build_ScrollTables(OutRom);
-	
-
-	Out_LevelPointersOffset = 0x0020 + SIZE_ROM_HEADER;
-	Out_ROMLevelPointerAddr = 0x8020;
-	
-	
-	
-	//unsigned short lvlptraddr = 0x20;
-	//unsigned short dataaddr = lvlptraddr + (12 * 5);
-	
-	//printf("Level data can start at 0x%04x (%d)\n", dataaddr, dataaddr);
+	build_LevelDataPointers(OutRom);
 	
 	//	Start with each set of data pointers for level data
 	//	overhead levels 2, 5-8 are in bank 2,
 	//	ordered like 5, 2, 6, 8, 4, 7
-	
-	
-	//	Build all of the Level Pointers
-	
-	unsigned char bytes[2];
-	
-	//	Level 1 data pointer
-	OutRomAddressToBytes(0x20 + 0x8000, (unsigned char *)&bytes);
-	OutRom[SIZE_ROM_HEADER] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 1] = bytes[1];
-	PrintLevelPointer("Level 1 Tank", (unsigned char *)&bytes);
-	
-	
-	//	Level 6 data pointer
-	OutRom[SIZE_ROM_HEADER + 0x4000] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x4000 + 1] = bytes[1];
-	PrintLevelPointer("Level 6 Tank", (unsigned char *)&bytes);
-	
-	//	Level 5o data pointer
-	OutRom[SIZE_ROM_HEADER + 0x8000] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 1] = bytes[1];
-	PrintLevelPointer("Level 5 Overhead", (unsigned char *)&bytes);
-	
-	//	Level 2 data pointer
-	OutRomAddressToBytes(0x20 + 12 + 0x8000, (unsigned char *)&bytes);
-	OutRom[SIZE_ROM_HEADER + 4] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 5] = bytes[1];
-	PrintLevelPointer("Level 2 Tank", (unsigned char *)&bytes);
-	
-	//	Level 7 data pointer
-	OutRom[SIZE_ROM_HEADER + 0x4000 + 4] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x4000 + 5] = bytes[1];
-	PrintLevelPointer("Level 7 Tank", (unsigned char *)&bytes);
-	
-	//	Level 2o data pointer
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 4] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 5] = bytes[1];
-	PrintLevelPointer("Level 2 Overhead", (unsigned char *)&bytes);
-	
-	//	Level 3 data pointer
-	OutRomAddressToBytes(0x20 + 24 + 0x8000, (unsigned char *)&bytes);
-	OutRom[SIZE_ROM_HEADER + 8] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 9] = bytes[1];
-	PrintLevelPointer("Level 3 Tank", (unsigned char *)&bytes);
-	
-	//	Level 8 data pointer
-	OutRom[SIZE_ROM_HEADER + 0x4000 + 8] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x4000 + 9] = bytes[1];
-	PrintLevelPointer("Level 8 Tank", (unsigned char *)&bytes);
-	
-	//	Level 6o data pointer
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 8] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 9] = bytes[1];
-	PrintLevelPointer("Level 6 Overhead", (unsigned char *)&bytes);
-	
-	//	Level 4 data pointer
-	OutRomAddressToBytes(0x20 + 36 + 0x8000, (unsigned char *)&bytes);
-	OutRom[SIZE_ROM_HEADER + 12] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 13] = bytes[1];
-	PrintLevelPointer("Level 4 Tank", (unsigned char *)&bytes);
-	
-	//	Level 1o data pointer
-	OutRom[SIZE_ROM_HEADER + 0x4000 + 12] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x4000 + 13] = bytes[1];
-	PrintLevelPointer("Level 4 Overhead", (unsigned char *)&bytes);
-	
-	//	Level 8o data pointer
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 12] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 13] = bytes[1];
-	PrintLevelPointer("Level 8 Overhead", (unsigned char *)&bytes);
-	
-	//	Level 5 data pointer
-	OutRomAddressToBytes(0x20 + 48 + 0x8000, (unsigned char *)&bytes);
-	OutRom[SIZE_ROM_HEADER + 16] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 17] = bytes[1];
-	PrintLevelPointer("Level 5 Tank", (unsigned char *)&bytes);
-	
-	//	Level 3o data pointer
-	OutRom[SIZE_ROM_HEADER + 0x4000 + 16] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x4000 + 17] = bytes[1];
-	PrintLevelPointer("Level 3 Overhead", (unsigned char *)&bytes);
-	
-	//	Level 4o data pointer
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 16] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 17] = bytes[1];
-	PrintLevelPointer("Level 4 Overhead", (unsigned char *)&bytes);
-	
-	//	Level 7o data pointer
-	OutRomAddressToBytes(0x20 + 60 + 0x8000, (unsigned char *)&bytes);
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 20] = bytes[0];
-	OutRom[SIZE_ROM_HEADER + 0x8000 + 21] = bytes[1];
-	PrintLevelPointer("Level 7 Overhead", (unsigned char *)&bytes);
+
 
 	
 	////////////////////////////////////////////////////////////////////////////
@@ -485,7 +384,7 @@ void BuildMapPointers(Level * level, unsigned short startloc, SerializedMapInfo 
 		OutRomAddressToBytes(addr + 0x8000, (unsigned char *)&bytes);
 		outbuf[10] = bytes[0];
 		outbuf[11] = bytes[1];
-		printf("Level %d Tank: Map Data Ptr: %02x %02x\n", level->levelid, bytes[0], bytes[1]);
+		//printf("Level %d Tank: Map Data Ptr: %02x %02x\n", level->levelid, bytes[0], bytes[1]);
 	}
 	else if(level->levelid > 4 && level->leveltype == LevelType_Tank)
 	{
@@ -500,7 +399,7 @@ void BuildMapPointers(Level * level, unsigned short startloc, SerializedMapInfo 
 		OutRomAddressToBytes(addr + 0x8000, (unsigned char *)&bytes);
 		outbuf[10] = bytes[0];
 		outbuf[11] = bytes[1];
-		printf("Level %d Tank: Map Data Ptr: %02x %02x\n", level->levelid, bytes[0], bytes[1]);
+		//printf("Level %d Tank: Map Data Ptr: %02x %02x\n", level->levelid, bytes[0], bytes[1]);
 	}
 	else if(level->leveltype == LevelType_Overhead &&
 		(level->levelid == 0 || level->levelid == 2))
@@ -524,7 +423,7 @@ void BuildMapPointers(Level * level, unsigned short startloc, SerializedMapInfo 
 		outbuf[10] = bytes[0];
 		outbuf[11] = bytes[1];
 		
-		printf("Level %d Overhead: Map Data Ptr: %02x %02x\n", level->levelid, bytes[0], bytes[1]);
+		//printf("Level %d Overhead: Map Data Ptr: %02x %02x\n", level->levelid, bytes[0], bytes[1]);
 	}
 	else
 	{
@@ -545,7 +444,7 @@ void BuildMapPointers(Level * level, unsigned short startloc, SerializedMapInfo 
 		OutRomAddressToBytes(addr + 0x8000, (unsigned char *)&bytes);
 		outbuf[10] = bytes[0];
 		outbuf[11] = bytes[1];
-		printf("Level %d Overhead: Map Data Ptr: %02x %02x\n", level->levelid, bytes[0], bytes[1]);
+		//printf("Level %d Overhead: Map Data Ptr: %02x %02x\n", level->levelid, bytes[0], bytes[1]);
 	}
 	
 }

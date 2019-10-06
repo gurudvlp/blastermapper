@@ -9,6 +9,7 @@
 #define SIZE_CHR_BANK 0x2000
 #define SIZE_ROM_HEADER 16
 #define SIZE_PALETTE 16
+#define SIZE_LEVELDATAPOINTERS 12
 
 #define COUNT_PRG_BANK 8
 #define COUNT_CHR_BANK 16
@@ -25,6 +26,7 @@
 #define OFFSET_SCROLLTABLE 0x00F2 + SIZE_ROM_HEADER
 #define OFFSET_MAP 0x0152 + SIZE_ROM_HEADER
 #define OFFSET_MAPDATA 0x1660 + SIZE_ROM_HEADER
+#define OFFSET_LEVELDATAPOINTERS 0x0020 + SIZE_ROM_HEADER
 
 typedef struct
 {
@@ -42,9 +44,4 @@ unsigned short BuildMapData(unsigned char * mapmeta, Level * level, unsigned cha
 unsigned char USBAttributeToByte(USBAttributes * usbattr);
 void BuildSubPalettes(Level * level, unsigned char * spbytes);
 void BuildMapPointers(Level * level, unsigned short startloc, SerializedMapInfo * smi, unsigned char * outbuf);
-
-
-unsigned short Out_LevelPointersOffset;
-unsigned short Out_ROMLevelPointerAddr;
-
 
