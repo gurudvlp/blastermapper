@@ -52,11 +52,10 @@ bool Merge(char * sourcerom, char * destrom, short bank)
 	//	for using original banks in a custom ROM for debugging.  At least that's
 	//	the idea.
 	
-	//	First, attempt to load both ROMs to verify that they are indeed the
-	//	correct formats.
-	printf("Loading %s...\n", sourcerom);
-	LoadRom(sourcerom);
+	//	Copy PrgRom and ChrRom of source
 	
+	
+	//	Load Destination rom and copy Prg and Chr
 	printf("Loading %s...\n", destrom);
 	LoadRom(destrom);
 	
