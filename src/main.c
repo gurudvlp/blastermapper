@@ -178,6 +178,22 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 	
+	if(IsCmdOptionSet(argc, argv, "merge"))
+	{
+		//	Attempt to merge two roms and exit.
+		if(argc < 5)
+		{
+			printf("Merge option must include a source, destination, and bank.\n");
+			printf("./blastmap <sourcerom> merge <destinationrom> <bank>\n");
+			exit(0);
+		}
+		
+		short bank = atoi(argv[4]);
+		
+		Merge(argv[1], argv[3], bank);
+		exit(0);
+	}
+	
 	SetupXWindows();
 	SetupGL();
 	

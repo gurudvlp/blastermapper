@@ -46,6 +46,26 @@ bool SaveRom()
 	return true;
 }
 
+bool Merge(char * sourcerom, char * destrom, short bank)
+{
+	//	Merge banks from a source ROM to a destination ROM.  This can be useful
+	//	for using original banks in a custom ROM for debugging.  At least that's
+	//	the idea.
+	
+	//	First, attempt to load both ROMs to verify that they are indeed the
+	//	correct formats.
+	printf("Loading %s...\n", sourcerom);
+	LoadRom(sourcerom);
+	
+	printf("Loading %s...\n", destrom);
+	LoadRom(destrom);
+	
+	printf("Roms checked, starting to merge...\n");
+	printf("Function not fully implemented.  Sorry.\n");
+	
+	return true;
+}
+
 void OutRomAddressToBytes(unsigned short addr, unsigned char * bytes)
 {
 	bytes[0] = addr & 0xFF;

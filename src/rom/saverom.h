@@ -42,6 +42,7 @@ bool SaveRom();
 void OutRomAddressToBytes(unsigned short addr, unsigned char * bytes);
 unsigned short BuildMapData(unsigned char * mapmeta, Level * level, unsigned char highblock, SerializedMapInfo * smi);
 void BuildSubPalettes(Level * level, unsigned char * spbytes);
+bool Merge(char * sourcerom, char * destrom, short bank);
 
 //	BuildMapPointers has been refactored as build_MapPointers
 //void BuildMapPointers(Level * level, unsigned short startloc, SerializedMapInfo * smi, unsigned char * outbuf);
