@@ -1,3 +1,6 @@
+#ifndef HEADER_LEVEL_LEVELTYPES
+#define HEADER_LEVEL_LEVELTYPES 1
+
 #include <stdlib.h>
 #include <X11/X.h>
 #include <X11/Xlib.h>
@@ -119,3 +122,5 @@ typedef struct
 } Level;
 
 Level Levels[8][2];
+
+#endif

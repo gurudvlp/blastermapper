@@ -1,5 +1,9 @@
-#include <stdlib.h>
+#ifndef HEADER_ROM_SAVEROM
+#define HEADER_ROM_SAVEROM 1
+
+//#include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "../main.h"
 
@@ -47,3 +51,4 @@ bool Merge(char * sourcerom, char * destrom, short bank);
 //	BuildMapPointers has been refactored as build_MapPointers
 //void BuildMapPointers(Level * level, unsigned short startloc, SerializedMapInfo * smi, unsigned char * outbuf);
 
+#endif

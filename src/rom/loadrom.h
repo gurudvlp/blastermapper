@@ -1,5 +1,10 @@
-#include <stdlib.h>
+#ifndef HEADER_ROM_LOADROM
+#define HEADER_ROM_LOADROM 1
+
+//#include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
+
 
 #include "../main.h"
 #include "../level/leveltypes.h"
@@ -23,3 +28,5 @@ FILE * RomFile;
 unsigned char RomHeader[16];
 unsigned char PrgRom[8][0x4000];
 unsigned char ChrRom[16][0x2000];
+
+#endif

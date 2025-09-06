@@ -15,6 +15,7 @@ LIBS = -pthread -lX11 -lGL -lGLU -g -Wall
 
 #	Set any compiler flags
 #CFLAGS = -lrt
+CFLAGS = -std=gnu99 -fcommon
 
 CC = gcc
 

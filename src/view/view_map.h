@@ -1,3 +1,6 @@
+#ifndef HEADER_VIEW_MAP
+#define HEADER_VIEW_MAP 1
+
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -10,3 +13,5 @@ void RenderMap_SelectXLeft();
 void RenderMap_SelectXRight();
 void RenderMap_SelectYDown();
 void RenderMap_SelectYUp();
+
+#endif

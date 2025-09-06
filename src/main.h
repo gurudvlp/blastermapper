@@ -1,3 +1,7 @@
+#ifndef HEADER_MAIN
+#define HEADER_MAIN
+
+//#include <stdbool.h>
 #include <stdlib.h>
 
 typedef int bool;
@@ -9,3 +13,5 @@ typedef int bool;
 
 bool SAVEROM_SHOW_LEVEL_POINTERS;
 bool IsCmdOptionSet(int argc, char ** argv, char option[]);
+
+#endif

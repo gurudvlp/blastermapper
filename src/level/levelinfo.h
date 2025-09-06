@@ -1,3 +1,6 @@
+#ifndef HEADER_LEVEL_LEVELINFO
+#define HEADER_LEVEL_LEVELINFO 1
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <GL/gl.h>
@@ -19,3 +22,5 @@ unsigned char level_USBAttributeToByte(USBAttributes * usbattr);
 GLuint darkenTextureID;
 GLuint spawnPointTextureID;
 GLuint thingSpawnTextureID;
+
+#endif
