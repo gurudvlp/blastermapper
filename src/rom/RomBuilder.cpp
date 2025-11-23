@@ -3,23 +3,38 @@
 #include <cstdio>
 #include <cstring>
 
-#include "Rom.hpp"
 #include "RomBuilder.hpp"
-#include "../level/LevelInfo.hpp"
+#include "../main.hpp"
 
 namespace blastmap {
 using namespace level;
 namespace rom {
 namespace builder {
 
-void SubPalettes(Level * level, unsigned char * spbytes);
+namespace {
+void PrintLevelPointer(const char * text, const unsigned char * bytes)
+{
+    if(SAVEROM_SHOW_LEVEL_POINTERS)
+    {
+        std::printf("%s: %02x %02x\n", text, bytes[0], bytes[1]);
+    }
+}
+} // namespace
+
+RomBuilder::RomBuilder(RomState & state)
+    : state_(state)
+{
+}
 
 //	Allocate and initialize memory for building the ROM file.
-unsigned char * InitializeRom()
+unsigned char * RomBuilder::InitializeRom()
 {
 	const std::size_t newsize = SIZE_ROM_HEADER + (COUNT_PRG_BANK * SIZE_PRG_BANK) + (COUNT_CHR_BANK * SIZE_CHR_BANK);
 	auto * OutRom = static_cast<unsigned char *>(std::malloc(newsize));
 	if(!OutRom) { return nullptr; }
+
+	auto & RomHeader = state_.Header();
+	auto & ChrRom = state_.ChrRom();
 
 	std::memset(OutRom, 0, newsize);
 
@@ -44,15 +59,17 @@ unsigned char * InitializeRom()
 //	Copy banks 3-7
 //	Bank 3 includes pointers to things, also some other unknown data.
 //	The remaining banks are the programming for the game.
-void CopyProgramming(unsigned char * OutRom)
+void RomBuilder::CopyProgramming(unsigned char * OutRom)
 {
+	auto & PrgRom = state_.PrgRom();
+
 	for(std::size_t eb = 3; eb < COUNT_PRG_BANK; ++eb)
 	{
 		std::memcpy(OutRom + SIZE_ROM_HEADER + (eb * SIZE_PRG_BANK), PrgRom[eb].data(), SIZE_PRG_BANK);
 	}
 }
 
-void InsertWatermarks(unsigned char * OutRom)
+void RomBuilder::InsertWatermarks(unsigned char * OutRom)
 {
 	//	Create PRGROM watermark
 	int eb;
@@ -84,7 +101,7 @@ void InsertWatermarks(unsigned char * OutRom)
 	OutRom[SIZE_ROM_HEADER + 0x19 + OFFSET_BANK_1] = 4;	
 }
 
-void SpawnPoints(unsigned char * OutRom)
+void RomBuilder::SpawnPoints(unsigned char * OutRom)
 {
 	//	Assemble the spawn points
 	//	Overhead spawn points start at 0x1C5B2 (OFFSET_SPAWNS_AFTERBOSS)
@@ -93,15 +110,23 @@ void SpawnPoints(unsigned char * OutRom)
 	
 	for(echr = 0; echr < 8; echr++)
 	{
-		OutRom[OFFSET_SPAWNS_AFTERBOSS + (echr * 2)] = Levels[echr][1].SpawnPoint.x;
-		OutRom[OFFSET_SPAWNS_AFTERBOSS + (echr * 2) + 1] = Levels[echr][1].SpawnPoint.y;
+		auto * overhead = gLevelManager.level(echr, 1);
+		if(overhead)
+		{
+			OutRom[OFFSET_SPAWNS_AFTERBOSS + (echr * 2)] = overhead->SpawnPoint.x;
+			OutRom[OFFSET_SPAWNS_AFTERBOSS + (echr * 2) + 1] = overhead->SpawnPoint.y;
+		}
 		
-		OutRom[OFFSET_SPAWNS_TANK + (echr * 2)] = Levels[echr][0].SpawnPoint.x;
-		OutRom[OFFSET_SPAWNS_TANK + (echr * 2) + 1] = Levels[echr][0].SpawnPoint.y;
+		auto * tank = gLevelManager.level(echr, 0);
+		if(tank)
+		{
+			OutRom[OFFSET_SPAWNS_TANK + (echr * 2)] = tank->SpawnPoint.x;
+			OutRom[OFFSET_SPAWNS_TANK + (echr * 2) + 1] = tank->SpawnPoint.y;
+		}
 	}
 }
 
-void Palettes(unsigned char * OutRom)
+void RomBuilder::Palettes(unsigned char * OutRom)
 {
 	//	Build the palette info for each level
 	//	As mentioned in the Rom Layout document, the areas aren't saved to the
@@ -115,22 +140,25 @@ void Palettes(unsigned char * OutRom)
 	
 	for(cnt = 0; cnt < 16; cnt++)
 	{
+		int levelIndex = levelorder[cnt];
+		int mode = (cnt < 8) ? 0 : 1;
+		Level * levelPtr = gLevelManager.level(levelIndex, mode);
+		if(!levelPtr)
+		{
+			levinbank++;
+			if(cnt == 4) { levinbank = 0; }
+			if(cnt == 9) { levinbank = 0; }
+			continue;
+		}
+
 		unsigned short oroff = levinbank * SIZE_PALETTE;
 		if(cnt > 4 && cnt < 10) { oroff += OFFSET_BANK_1; }
 		if(cnt >= 10) { oroff += OFFSET_BANK_2; }
 		
 		oroff += OFFSET_PALETTE;
 		
-		//printf("Writing Palette data for level %d:%d at addr:0x%04X\n", cnt, levelorder[cnt], oroff);
+		SubPalettes(levelPtr, &OutRom[oroff]);
 		
-		SubPalettes(
-			(Level *)&Levels[levelorder[cnt]][(cnt < 8) ? 0 : 1],
-			&OutRom[oroff]
-		);
-		
-		//	Because the first two banks each store 5 Areas of data, and the third
-		//	bank stores 6 Areas, we have to do a little checking to see where
-		//	to save data.
 		levinbank++;
 		if(cnt == 4) { levinbank = 0; }
 		if(cnt == 9) { levinbank = 0; }
@@ -138,7 +166,7 @@ void Palettes(unsigned char * OutRom)
 
 }
 
-void SubPalettes(Level * level, unsigned char * spbytes)
+void RomBuilder::SubPalettes(Level * level, unsigned char * spbytes)
 {
 	int esp;
 	for(esp = 0; esp < 4; esp++)
@@ -160,7 +188,7 @@ void SubPalettes(Level * level, unsigned char * spbytes)
 //	unsigned char * highblock
 //		An array of 16 bytes.  Each byte is a value from 0 to 255 that
 //		represents the highest block id for each successive Area
-void Maps(unsigned char * OutRom)
+void RomBuilder::Maps(unsigned char * OutRom)
 {
 	unsigned short levelorder[] = { 0, 1, 2, 3, 4, 5, 6, 7, 0, 2, 4, 1, 5, 7, 3, 6 };
 	unsigned short cnt;
@@ -174,23 +202,34 @@ void Maps(unsigned char * OutRom)
 	
 	for(cnt = 0; cnt < 16; cnt++)
 	{
+		int levelIndex = levelorder[cnt];
+		int mode = (cnt < 8) ? 0 : 1;
+		Level * levelPtr = gLevelManager.level(levelIndex, mode);
+		if(!levelPtr)
+		{
+			levinbank++;
+			if(cnt == 4) { levinbank = 0; ttlsize = 0; addbank++; }
+			if(cnt == 9) { levinbank = 0; ttlsize = 0; addbank++; }
+			continue;
+		}
+
 		//	Build the 32x32 map grid
 		highblock[cnt] = blastmap::level::MapToBytes(
 			&OutRom[OFFSET_MAP + (SIZE_MAP * levinbank) + (addbank * SIZE_PRG_BANK)],
-			&Levels[levelorder[cnt]][(cnt < 8) ? 0 : 1]
+			levelPtr
 		);
 		
 		//	Build all of the blocks, sub blocks and ultra sub blocks
 		datasize[cnt] = MapData(
 			&OutRom[OFFSET_MAPDATA + ttlsize + (addbank * SIZE_PRG_BANK)],
-			&Levels[levelorder[cnt]][(cnt < 8) ? 0 : 1],
+			levelPtr,
 			highblock[cnt],
 			&smi[cnt]
 		);
 		
 		//	Build all of the pointers to the above
 		MapPointers(
-			&Levels[levelorder[cnt]][(cnt < 8) ? 0 : 1],
+			levelPtr,
 			OFFSET_MAPDATA - SIZE_ROM_HEADER + ttlsize,
 			&smi[cnt],
 			&OutRom[OFFSET_LEVELDATAPOINTERS + (SIZE_LEVELDATAPOINTERS * levinbank) + (addbank * SIZE_PRG_BANK)]
@@ -252,7 +291,7 @@ void Maps(unsigned char * OutRom)
 	
 }
 
-void ScrollTables(unsigned char * OutRom)
+void RomBuilder::ScrollTables(unsigned char * OutRom)
 {
 	//	The levels in the game aren't saved in order, so here is an array that
 	//	specifies the order in which they are saved.
@@ -290,10 +329,21 @@ void ScrollTables(unsigned char * OutRom)
 	
 	for(cnt = 0; cnt < 16; cnt++)
 	{
+		int levelIndex = levelorder[cnt];
+		int mode = (cnt < 8) ? 0 : 1;
+		Level * levelPtr = gLevelManager.level(levelIndex, mode);
+		if(!levelPtr)
+		{
+			levinbank++;
+			if(cnt == 4) { levinbank = 0; addbank++; }
+			if(cnt == 9) { levinbank = 0; addbank++; }
+			continue;
+		}
+
 		for(eb = 0; eb < SIZE_SCROLLTABLE; eb++)
 		{
-			OutRom[OFFSET_SCROLLTABLE + (SIZE_SCROLLTABLE * levinbank) + (SIZE_PRG_BANK * addbank) + eb] = 
-				Levels[levelorder[cnt]][(cnt < 8) ? 0 : 1].ScrollTable[eb];
+			OutRom[OFFSET_SCROLLTABLE + (SIZE_SCROLLTABLE * levinbank) + (SIZE_PRG_BANK * addbank) + eb] =
+				levelPtr->ScrollTable[eb];
 		}
 		
 		levinbank++;
@@ -307,7 +357,7 @@ void ScrollTables(unsigned char * OutRom)
 //	pointers is hard coded into the ROM, but where they point to is a little bit
 //	more flexible.  The layout of the rebuilt ROM is described in the Rom Layout
 //	document.
-void LevelDataPointers(unsigned char * OutRom)
+void RomBuilder::LevelDataPointers(unsigned char * OutRom)
 {
 	unsigned short cnt;
 	unsigned short levinbank = 0;
@@ -341,7 +391,7 @@ void LevelDataPointers(unsigned char * OutRom)
 }
 
 
-unsigned short MapData(unsigned char * mapmeta, Level * level, unsigned char highblock, SerializedMapInfo * smi)
+unsigned short RomBuilder::MapData(unsigned char * mapmeta, Level * level, unsigned char highblock, SerializedMapInfo * smi)
 {
 	unsigned char highsb = 0x00;
 	unsigned char highusb = 0x00;
@@ -400,7 +450,7 @@ unsigned short MapData(unsigned char * mapmeta, Level * level, unsigned char hig
 	return pos;
 }
 
-void MapPointers(Level * level, unsigned short startloc, SerializedMapInfo * smi, unsigned char * outbuf)
+void RomBuilder::MapPointers(Level * level, unsigned short startloc, SerializedMapInfo * smi, unsigned char * outbuf)
 {
 	//	Build pointers per level/map
 	//	The are arranged like:
@@ -522,7 +572,7 @@ void MapPointers(Level * level, unsigned short startloc, SerializedMapInfo * smi
 	
 }
 
-void OutRomAddressToBytes(unsigned short addr, unsigned char * bytes)
+void RomBuilder::OutRomAddressToBytes(unsigned short addr, unsigned char * bytes)
 {
 	bytes[0] = static_cast<unsigned char>(addr & 0xFF);
 	bytes[1] = static_cast<unsigned char>((addr >> 8) & 0xFF);

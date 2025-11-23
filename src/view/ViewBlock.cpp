@@ -1,13 +1,11 @@
 #include <cstdint>
 
-#include <X11/X.h>
-#include <X11/Xlib.h>
 #include <GL/gl.h>
-#include <GL/glx.h>
 #include <GL/glu.h>
 
 #include "ViewBlock.hpp"
 #include "../level/Level.hpp"
+#include "../level/LevelInfo.hpp"
 
 namespace
 {
@@ -34,7 +32,8 @@ void BlockRenderer::SetBlock(int block)
 
 void BlockRenderer::Render()
 {
-    Level * level = (Level *)&Levels[level_][mode_];
+    Level * level = gLevelManager.level(level_, mode_);
+    if(!level) { return; }
 
 	glClearColor(1.0, 1.0, 1.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

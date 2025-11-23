@@ -2,10 +2,7 @@
 #include <cstdint>
 #include <cstdio>
 
-#include <X11/X.h>
-#include <X11/Xlib.h>
 #include <GL/gl.h>
-#include <GL/glx.h>
 #include <GL/glu.h>
 
 #include "ViewMap.hpp"
@@ -40,9 +37,10 @@ void MapRenderer::SetSelection(int x, int y)
 	selectedY_ = y;
 }
 
-void MapRenderer::Render(unsigned char darken)
-{
-	Level * level = (Level *)&Levels[level_][mode_];
+	void MapRenderer::Render(unsigned char darken)
+	{
+	Level * level = gLevelManager.level(level_, mode_);
+	if(!level) { return; }
 
 	glClearColor(1.0, 1.0, 1.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -134,7 +132,7 @@ void DarkenAllQuandrantsBut(int selectedx, int selectedy)
 				float sx, sy, ex, ey;
 				QuadScreenCoords(x, y, &sx, &sy, &ex, &ey);
 
-				glBindTexture(GL_TEXTURE_2D, darkenTextureID);
+			glBindTexture(GL_TEXTURE_2D, gLevelManager.darkenTextureID());
 
 				glBegin(GL_QUADS);
 
@@ -174,7 +172,7 @@ void RenderMap_SpawnPoint(Level * level)
 	ex = sx + (2.0f / 128.0f);
 	ey = sy + (2.0f / 128.0f);
 
-	glBindTexture(GL_TEXTURE_2D, spawnPointTextureID);
+	glBindTexture(GL_TEXTURE_2D, gLevelManager.spawnPointTextureID());
 
 	glBegin(GL_QUADS);
 

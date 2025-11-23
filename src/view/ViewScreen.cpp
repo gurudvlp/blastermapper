@@ -1,10 +1,7 @@
 #include <array>
 #include <cstdint>
 
-#include <X11/X.h>
-#include <X11/Xlib.h>
 #include <GL/gl.h>
-#include <GL/glx.h>
 #include <GL/glu.h>
 
 #include "ViewScreen.hpp"
@@ -53,7 +50,8 @@ unsigned char ScreenRenderer::SelectedBlockY() const
 
 void ScreenRenderer::Render(unsigned char darken)
 {
-    Level * level = (Level *)&Levels[level_][mode_];
+    Level * level = gLevelManager.level(level_, mode_);
+    if(!level) { return; }
 
     glClearColor(1.0, 1.0, 1.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -104,7 +102,7 @@ void ScreenRenderer::Render(unsigned char darken)
                     const float ex = sx + 0.5f;
                     const float ey = sy - 0.5f;
 
-                    glBindTexture(GL_TEXTURE_2D, darkenTextureID);
+                    glBindTexture(GL_TEXTURE_2D, gLevelManager.darkenTextureID());
 
                     glBegin(GL_QUADS);
                         glTexCoord2f(0, 0); glVertex3f(sx, ey, 0.1f);
@@ -207,14 +205,14 @@ void RenderScreen_SpawnPoint(Level * level, int screen)
     };
 
     const auto baseCoords = computeCoords(x, y);
-    drawSprite(spawnPointTextureID, baseCoords[0], baseCoords[1], baseCoords[2], baseCoords[3], 0.11f);
+    drawSprite(gLevelManager.spawnPointTextureID(), baseCoords[0], baseCoords[1], baseCoords[2], baseCoords[3], 0.11f);
 
     for(int et = 0; et < 256; et++)
     {
         if(level->Things[et].thingtype == 0xFF) { break; }
 
         const auto thingCoords = computeCoords(level->Things[et].x, level->Things[et].y);
-        drawSprite(thingSpawnTextureID, thingCoords[0], thingCoords[1], thingCoords[2], thingCoords[3], 0.11f);
+        drawSprite(gLevelManager.thingSpawnTextureID(), thingCoords[0], thingCoords[1], thingCoords[2], thingCoords[3], 0.11f);
     }
 }
 } // namespace

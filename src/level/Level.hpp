@@ -7,8 +7,7 @@
 
 #include <GL/gl.h>
 
-namespace blastmap {
-namespace level {
+namespace blastmap::level {
 
 using LevelTypeValue = std::uint8_t;
 enum class LevelType : LevelTypeValue
@@ -115,9 +114,6 @@ struct Level
     SpawnCoords SpawnPoint{};
 };
 
-extern Level Levels[LevelCount][LevelModes];
-
-} // namespace level
-} // namespace blastmap
+} // namespace blastmap::level
 
 #endif

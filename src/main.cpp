@@ -3,11 +3,8 @@
 #include <cstdlib>
 #include <cstring>
 
-#include <unistd.h>
-#include <X11/X.h>
-#include <X11/Xlib.h>
+#include <SDL2/SDL.h>
 #include <GL/gl.h>
-#include <GL/glx.h>
 #include <GL/glu.h>
 
 #include "main.hpp"
@@ -34,6 +31,10 @@ bool IsCmdOptionSet(int argc, char ** argv, const char option[])
 
 namespace blastmap {
 using namespace level;
+
+namespace {
+rom::Rom gRom;
+}
 namespace detail {
 
 enum class ZoomMode : int
@@ -146,16 +147,10 @@ struct EditorState
 
 namespace platform {
 
-Display *dpy = nullptr;
-Window root;
-GLint att[] = { GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None };
-XVisualInfo *vi = nullptr;
-Colormap cmap;
-XSetWindowAttributes swa;
-Window win;
-GLXContext glc;
-XWindowAttributes gwa;
-XEvent xev;
+SDL_Window *window = nullptr;
+SDL_GLContext glContext = nullptr;
+int windowWidth = WindowWidth;
+int windowHeight = WindowHeight;
 GLubyte darkenTex[8 * 8 * 4];
 GLubyte spawnPointTex[8 * 8 * 4];
 GLubyte thingSpawnTex[8 * 8 * 4];
@@ -173,8 +168,10 @@ void BuildDarkenTexture()
     }
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glGenTextures(1, &darkenTextureID);
-    glBindTexture(GL_TEXTURE_2D, darkenTextureID);
+    GLuint textureID = 0;
+    glGenTextures(1, &textureID);
+    gLevelManager.setDarkenTextureID(textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -209,8 +206,10 @@ void BuildSpawnPointTexture()
     }
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glGenTextures(1, &spawnPointTextureID);
-    glBindTexture(GL_TEXTURE_2D, spawnPointTextureID);
+    GLuint textureID = 0;
+    glGenTextures(1, &textureID);
+    gLevelManager.setSpawnPointTextureID(textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -245,8 +244,10 @@ void BuildThingSpawnTexture()
     }
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glGenTextures(1, &thingSpawnTextureID);
-    glBindTexture(GL_TEXTURE_2D, thingSpawnTextureID);
+    GLuint textureID = 0;
+    glGenTextures(1, &textureID);
+    gLevelManager.setThingSpawnTextureID(textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -257,27 +258,27 @@ void BuildThingSpawnTexture()
 
 } // namespace
 
-void SetupXWindows()
+void SetupSDL()
 {
-    dpy = XOpenDisplay(NULL);
-    if(!dpy) { fprintf(stderr, "cannot connect to X server\n"); std::exit(1); }
+    if(SDL_Init(SDL_INIT_VIDEO) != 0) { fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError()); std::exit(1); }
 
-    root = DefaultRootWindow(dpy);
-    vi = glXChooseVisual(dpy, 0, att);
-    if(!vi) { fprintf(stderr, "no appropriate visual found\n"); std::exit(1); }
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
-    cmap = XCreateColormap(dpy, root, vi->visual, AllocNone);
-    swa.colormap = cmap;
-    swa.event_mask = ExposureMask | KeyPressMask;
+    window = SDL_CreateWindow("blaster mapper",
+                              SDL_WINDOWPOS_CENTERED,
+                              SDL_WINDOWPOS_CENTERED,
+                              WindowWidth,
+                              WindowHeight,
+                              SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    if(!window) { fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError()); std::exit(1); }
 
-    win = XCreateWindow(dpy, root, 0, 0, WindowWidth, WindowHeight, 0,
-                        vi->depth, InputOutput, vi->visual,
-                        CWColormap | CWEventMask, &swa);
-    XMapWindow(dpy, win);
-    XStoreName(dpy, win, "blaster mapper");
-
-    glc = glXCreateContext(dpy, vi, NULL, GL_TRUE);
-    glXMakeCurrent(dpy, win, glc);
+    glContext = SDL_GL_CreateContext(window);
+    if(!glContext) { fprintf(stderr, "SDL_GL_CreateContext failed: %s\n", SDL_GetError()); std::exit(1); }
+    SDL_GL_MakeCurrent(window, glContext);
+    SDL_GL_SetSwapInterval(1);
+    windowWidth = WindowWidth;
+    windowHeight = WindowHeight;
     glEnable(GL_DEPTH_TEST);
 }
 
@@ -298,6 +299,23 @@ void SetupGL()
     BuildDarkenTexture();
     BuildSpawnPointTexture();
     BuildThingSpawnTexture();
+}
+
+void TeardownSDL()
+{
+    if(glContext)
+    {
+        SDL_GL_DeleteContext(glContext);
+        glContext = nullptr;
+    }
+
+    if(window)
+    {
+        SDL_DestroyWindow(window);
+        window = nullptr;
+    }
+
+    SDL_Quit();
 }
 
 } // namespace platform
@@ -385,89 +403,83 @@ void ApplyCommandLineOptions(detail::EditorState &state, int argc, char **argv)
     else { SAVEROM_SHOW_LEVEL_POINTERS = false; }
 }
 
-void HandleKeyPress(detail::EditorState &editor, XKeyEvent *xke)
+bool HandleKeyPress(detail::EditorState &editor, SDL_Keycode key)
 {
-    const auto code = xke->keycode;
     auto &screenRenderer = g_screenRenderer;
     const unsigned char currentSelectedX = screenRenderer.SelectedBlockX();
     const unsigned char currentSelectedY = screenRenderer.SelectedBlockY();
 
-    if(code == 9)
+    if(key == SDLK_ESCAPE)
     {
-        if(editor.zoom == detail::ZoomMode::Map)
-        {
-            glXMakeCurrent(platform::dpy, None, NULL);
-            glXDestroyContext(platform::dpy, platform::glc);
-            XDestroyWindow(platform::dpy, platform::win);
-            XCloseDisplay(platform::dpy);
-            std::exit(0);
-        }
+        if(editor.zoom == detail::ZoomMode::Map) { return false; }
         editor.zoomOut();
-        return;
+        return true;
     }
 
-    if(code == 111) { editor.moveUp(); return; }
-    if(code == 116) { editor.moveDown(); return; }
-    if(code == 113) { editor.moveLeft(); return; }
-    if(code == 114) { editor.moveRight(); return; }
+    if(key == SDLK_UP) { editor.moveUp(); return true; }
+    if(key == SDLK_DOWN) { editor.moveDown(); return true; }
+    if(key == SDLK_LEFT) { editor.moveLeft(); return true; }
+    if(key == SDLK_RIGHT) { editor.moveRight(); return true; }
 
-    if(code == 36) { editor.zoomIn(); return; }
-    if(code == 39) { rom::SaveRom(); return; }
+    if(key == SDLK_RETURN || key == SDLK_KP_ENTER) { editor.zoomIn(); return true; }
+    if(key == SDLK_s) { gRom.save(); return true; }
 
-    if(code >= 10 && code <= 17)
+    if(key >= SDLK_1 && key <= SDLK_8)
     {
-        editor.level = code - 10;
-        return;
+        editor.level = static_cast<int>(key - SDLK_1);
+        return true;
     }
 
-    if(code == 19)
+    if(key == SDLK_0)
     {
         editor.mode = (editor.mode == 0) ? 1 : 0;
-        return;
+        return true;
     }
 
     if(editor.zoom == detail::ZoomMode::Screen)
     {
-        if(code == 80 || code == 35)
+        if(key == SDLK_KP_8 || key == SDLK_RIGHTBRACKET)
         {
-            unsigned char block = BlockAt(editor.level, editor.mode, currentSelectedX, currentSelectedY);
+            unsigned char block = gLevelManager.blockAt(editor.level, editor.mode, currentSelectedX, currentSelectedY);
             if(block == 0xFF) { block = 0x00; }
-            else if(block == GetHighestBlockID(editor.level, editor.mode)) { block = 0x00; }
+            else if(block == gLevelManager.highestBlockID(editor.level, editor.mode)) { block = 0x00; }
             else { block++; }
-            SetBlockAt(editor.level, editor.mode, currentSelectedX, currentSelectedY, block);
-            return;
+            gLevelManager.setBlockAt(editor.level, editor.mode, currentSelectedX, currentSelectedY, block);
+            return true;
         }
 
-        if(code == 88 || code == 34)
+        if(key == SDLK_KP_2 || key == SDLK_LEFTBRACKET)
         {
-            unsigned char block = BlockAt(editor.level, editor.mode, currentSelectedX, currentSelectedY);
-            if(block == 0x00) { block = GetHighestBlockID(editor.level, editor.mode); }
+            unsigned char block = gLevelManager.blockAt(editor.level, editor.mode, currentSelectedX, currentSelectedY);
+            if(block == 0x00) { block = gLevelManager.highestBlockID(editor.level, editor.mode); }
             else { block--; }
-            SetBlockAt(editor.level, editor.mode, currentSelectedX, currentSelectedY, block);
-            return;
+            gLevelManager.setBlockAt(editor.level, editor.mode, currentSelectedX, currentSelectedY, block);
+            return true;
         }
 
-        if(code == 54)
+        if(key == SDLK_c)
         {
-            BlockClipboard = BlockAt(editor.level, editor.mode, currentSelectedX, currentSelectedY);
-            return;
+            gLevelManager.setBlockClipboard(
+                gLevelManager.blockAt(editor.level, editor.mode, currentSelectedX, currentSelectedY)
+            );
+            return true;
         }
 
-        if(code == 55)
+        if(key == SDLK_v)
         {
-            SetBlockAt(editor.level, editor.mode, currentSelectedX, currentSelectedY, BlockClipboard);
-            return;
+            gLevelManager.setBlockAt(editor.level, editor.mode, currentSelectedX, currentSelectedY, gLevelManager.blockClipboard());
+            return true;
         }
 
-        if(code == 86 || code == 21)
+        if(key == SDLK_KP_PLUS || key == SDLK_EQUALS)
         {
             unsigned short spx = (currentSelectedX * 4) + 1;
             unsigned short spy = (currentSelectedY * 4) + 1;
-            SetSpawnPoint(editor.level, editor.mode, spx, spy);
-            return;
+            gLevelManager.setSpawnPoint(editor.level, editor.mode, spx, spy);
+            return true;
         }
 
-        if(code == 28)
+        if(key == SDLK_t)
         {
             unsigned short sbx = (currentSelectedX * 4);
             unsigned short sby = (currentSelectedY * 4);
@@ -475,14 +487,16 @@ void HandleKeyPress(detail::EditorState &editor, XKeyEvent *xke)
             {
                 for(int ty = 0; ty < 4; ++ty)
                 {
-                    short thing = GetThingAt(editor.level, editor.mode, sbx + tx, sby + ty);
+                    short thing = gLevelManager.thingAt(editor.level, editor.mode, sbx + tx, sby + ty);
                     if(thing >= 0) { printf("Thing found: %d\n", thing); }
                     editor.thing = static_cast<unsigned short>(thing < 0 ? 0 : thing);
                 }
             }
-            return;
+            return true;
         }
     }
+
+    return true;
 }
 
 int Run(int argc, char **argv)
@@ -497,7 +511,7 @@ int Run(int argc, char **argv)
 
     InitializePalette();
 
-    if(!rom::LoadRom(argv[1]))
+    if(!gRom.load(argv[1]))
     {
         printf("Failed to load ROM.\n");
         return 1;
@@ -509,14 +523,8 @@ int Run(int argc, char **argv)
         {
             char option[12] = {};
             std::snprintf(option, sizeof(option), "things%d%d", lvl + 1, mode);
-            if(IsCmdOptionSet(argc, argv, option)) { rom::PrintThings(lvl, mode); }
+            if(IsCmdOptionSet(argc, argv, option)) { gRom.printThings(lvl, mode); }
         }
-    }
-
-    for(int el = 0; el < 8; ++el)
-    {
-        rom::LoadUSBTextures(el, 0);
-        rom::LoadUSBTextures(el, 1);
     }
 
     detail::EditorState editor;
@@ -526,12 +534,12 @@ int Run(int argc, char **argv)
        || IsCmdOptionSet(argc, argv, "print-spawns")
        || IsCmdOptionSet(argc, argv, "spawnpoints"))
     {
-        PrintSpawnPoints();
+        gLevelManager.printSpawnPoints();
     }
 
     if(IsCmdOptionSet(argc, argv, "save"))
     {
-        rom::SaveRom();
+        gRom.save();
         return 0;
     }
 
@@ -544,48 +552,66 @@ int Run(int argc, char **argv)
             return 1;
         }
         short bank = static_cast<short>(std::atoi(argv[4]));
-        rom::Merge(argv[1], argv[3], bank);
+        gRom.merge(argv[1], argv[3], bank);
         return 0;
     }
 
-    platform::SetupXWindows();
+    platform::SetupSDL();
     platform::SetupGL();
 
     printf("Creating textures from CHR ROM\n");
-    int el;
-	for(el = 0; el < 8; el++)
-	{
-		rom::LoadUSBTextures(el, 0);
-		rom::LoadUSBTextures(el, 1);
-	}
-
-    while(true)
+    for(int el = 0; el < 8; el++)
     {
-        while(XPending(platform::dpy))
-        {
-            XNextEvent(platform::dpy, &platform::xev);
+        gRom.loadUSBTextures(el, 0);
+        gRom.loadUSBTextures(el, 1);
+    }
 
-            if(platform::xev.type == Expose)
+    RenderEditor(editor);
+    SDL_GL_SwapWindow(platform::window);
+
+    bool running = true;
+    SDL_Event sdlEvent;
+
+    while(running)
+    {
+        while(SDL_PollEvent(&sdlEvent))
+        {
+            if(sdlEvent.type == SDL_QUIT)
             {
-                printf("Expose event\n");
-                XGetWindowAttributes(platform::dpy, platform::win, &platform::gwa);
-                glViewport(0, 0, platform::gwa.width, platform::gwa.height);
-                
-                RenderEditor(editor);
-                glXSwapBuffers(platform::dpy, platform::win);
+                running = false;
+                break;
             }
-            else if(platform::xev.type == KeyPress)
+
+            if(sdlEvent.type == SDL_WINDOWEVENT)
             {
-                XKeyEvent *xke = reinterpret_cast<XKeyEvent *>(&platform::xev);
-                printf("Keycode %d\n", xke->keycode);
-                HandleKeyPress(editor, xke);
-                
+                if(sdlEvent.window.event == SDL_WINDOWEVENT_SIZE_CHANGED ||
+                   sdlEvent.window.event == SDL_WINDOWEVENT_RESIZED)
+                {
+                    platform::windowWidth = sdlEvent.window.data1;
+                    platform::windowHeight = sdlEvent.window.data2;
+                    glViewport(0, 0, platform::windowWidth, platform::windowHeight);
+                    RenderEditor(editor);
+                    SDL_GL_SwapWindow(platform::window);
+                }
+            }
+            else if(sdlEvent.type == SDL_KEYDOWN)
+            {
+                bool shouldContinue = HandleKeyPress(editor, sdlEvent.key.keysym.sym);
                 RenderEditor(editor);
-                glXSwapBuffers(platform::dpy, platform::win);
+                SDL_GL_SwapWindow(platform::window);
+                if(!shouldContinue)
+                {
+                    running = false;
+                    break;
+                }
             }
         }
-        sleep(0);
+
+        if(!running) { break; }
+        SDL_Delay(1);
     }
+
+    platform::TeardownSDL();
 
     return 0;
 }

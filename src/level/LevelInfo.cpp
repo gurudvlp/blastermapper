@@ -1,122 +1,108 @@
 #include "LevelInfo.hpp"
 
 #include <algorithm>
-#include <cstring>
 #include <cstdio>
 
-namespace blastmap {
-namespace level {
+namespace blastmap::level {
 
-Level Levels[LevelCount][LevelModes];
-unsigned char BlockClipboard = 0;
-GLuint darkenTextureID = 0;
-GLuint spawnPointTextureID = 0;
-GLuint thingSpawnTextureID = 0;
+LevelManager gLevelManager;
 
-namespace {
+LevelManager::LevelManager() = default;
 
-bool ValidLevelIndices(int lvl, int lvlmode)
+bool LevelManager::validIndices(int lvl, int lvlmode) const
 {
     return lvl >= 0 && lvl < static_cast<int>(LevelCount)
         && lvlmode >= 0 && lvlmode < static_cast<int>(LevelModes);
 }
 
-Level * ResolveLevel(int lvl, int lvlmode)
+Level * LevelManager::level(int lvl, int lvlmode)
 {
-    if(!ValidLevelIndices(lvl, lvlmode)) { return nullptr; }
-    return &Levels[lvl][lvlmode];
+    if(!validIndices(lvl, lvlmode)) { return nullptr; }
+    return &levels_[lvl][lvlmode];
 }
 
-int FindThingAt(const Level & level, unsigned char x, unsigned char y)
+const Level * LevelManager::level(int lvl, int lvlmode) const
 {
-    for(std::size_t idx = 0; idx < ThingMax; ++idx)
-    {
-        if(level.Things[idx].x == x && level.Things[idx].y == y)
-        {
-            return static_cast<int>(idx);
-        }
-    }
-    return -1;
+    if(!validIndices(lvl, lvlmode)) { return nullptr; }
+    return &levels_[lvl][lvlmode];
 }
 
-} // namespace
-
-unsigned char GetHighestBlockID(int lvl, int lvlmode)
+unsigned char LevelManager::highestBlockID(int lvl, int lvlmode) const
 {
-    auto * level = ResolveLevel(lvl, lvlmode);
-    if(!level) { return 0; }
+    const Level * lvlptr = level(lvl, lvlmode);
+    if(!lvlptr) { return 0; }
 
     unsigned char highest = 0;
     for(std::size_t y = 0; y < MapHeight; ++y)
     {
         for(std::size_t x = 0; x < MapWidth; ++x)
         {
-            highest = std::max(highest, level->Map[x][y]);
+            highest = std::max(highest, lvlptr->Map[x][y]);
         }
     }
     return highest;
 }
 
-unsigned char GetHighestSubBlockID(int lvl, int lvlmode)
+unsigned char LevelManager::highestSubBlockID(int lvl, int lvlmode) const
 {
-    auto * level = ResolveLevel(lvl, lvlmode);
-    if(!level) { return 0; }
+    auto highblock = highestBlockID(lvl, lvlmode);
+    auto * levelPtr = level(lvl, lvlmode);
+    if(!levelPtr) { return 0; }
 
-    unsigned char highblock = GetHighestBlockID(lvl, lvlmode);
     unsigned char highest = 0;
     for(unsigned int eb = 0; eb <= highblock; ++eb)
     {
         for(unsigned int esb = 0; esb < BlockSize; ++esb)
         {
-            highest = std::max(highest, level->Blocks[eb][esb]);
+            highest = std::max(highest, levelPtr->Blocks[eb][esb]);
         }
     }
     return highest;
 }
 
-unsigned char GetHighestUltraSubBlockID(int lvl, int lvlmode)
+unsigned char LevelManager::highestUltraSubBlockID(int lvl, int lvlmode) const
 {
-    auto * level = ResolveLevel(lvl, lvlmode);
-    if(!level) { return 0; }
+    auto highsb = highestSubBlockID(lvl, lvlmode);
+    auto * levelPtr = level(lvl, lvlmode);
+    if(!levelPtr) { return 0; }
 
-    unsigned char highsb = GetHighestSubBlockID(lvl, lvlmode);
     unsigned char highest = 0;
     for(unsigned int esb = 0; esb <= highsb; ++esb)
     {
         for(unsigned int eusb = 0; eusb < BlockSize; ++eusb)
         {
-            highest = std::max(highest, level->SubBlocks[esb][eusb]);
+            highest = std::max(highest, levelPtr->SubBlocks[esb][eusb]);
         }
     }
     return highest;
 }
 
-unsigned char BlockAt(int lvl, int lvlmode, int x, int y)
+unsigned char LevelManager::blockAt(int lvl, int lvlmode, int x, int y) const
 {
-    auto * level = ResolveLevel(lvl, lvlmode);
-    return level ? level->Map[x][y] : 0;
+    auto * levelPtr = level(lvl, lvlmode);
+    return levelPtr ? levelPtr->Map[x][y] : 0;
 }
 
-void SetBlockAt(int lvl, int lvlmode, int x, int y, unsigned char blockid)
+void LevelManager::setBlockAt(int lvl, int lvlmode, int x, int y, unsigned char blockid)
 {
-    auto * level = ResolveLevel(lvl, lvlmode);
-    if(level) { level->Map[x][y] = blockid; }
+    auto * levelPtr = level(lvl, lvlmode);
+    if(levelPtr) { levelPtr->Map[x][y] = blockid; }
 }
 
-void SetSpawnPoint(int lvl, int lvlmode, int x, int y)
+void LevelManager::setSpawnPoint(int lvl, int lvlmode, int x, int y)
 {
-    auto * level = ResolveLevel(lvl, lvlmode);
-    if(!level) { return; }
-    level->SpawnPoint.x = static_cast<unsigned char>(x & 0xFF);
-    level->SpawnPoint.y = static_cast<unsigned char>(y & 0xFF);
+    auto * levelPtr = level(lvl, lvlmode);
+    if(!levelPtr) { return; }
+    levelPtr->SpawnPoint.x = static_cast<unsigned char>(x & 0xFF);
+    levelPtr->SpawnPoint.y = static_cast<unsigned char>(y & 0xFF);
 }
 
-void PrintSpawnPoints()
+void LevelManager::printSpawnPoints() const
 {
     for(std::size_t el = 0; el < LevelCount; ++el)
     {
-        const Level & tank = Levels[el][0];
-        const Level & overhead = Levels[el][1];
+        const Level & tank = levels_[el][0];
+        const Level & overhead = levels_[el][1];
 
         std::printf("Level %zu Tank Spawn (%02x, %02x) (%d, %d)\n",
                     el,
@@ -134,14 +120,28 @@ void PrintSpawnPoints()
     }
 }
 
-short GetThingAt(int lvl, int lvlmode, int x, int y)
+int LevelManager::findThingAt(const Level & level, unsigned char x, unsigned char y) const
 {
-    if(!ValidLevelIndices(lvl, lvlmode)) { return -1; }
-    const Level & level = Levels[lvl][lvlmode];
-    return static_cast<short>(FindThingAt(level, static_cast<unsigned char>(x & 0xFF), static_cast<unsigned char>(y & 0xFF)));
+    for(std::size_t idx = 0; idx < ThingMax; ++idx)
+    {
+        if(level.Things[idx].x == x && level.Things[idx].y == y)
+        {
+            return static_cast<int>(idx);
+        }
+    }
+    return -1;
 }
 
-unsigned char MapToBytes(unsigned char * mapdata, Level * level)
+short LevelManager::thingAt(int lvl, int lvlmode, int x, int y) const
+{
+    auto * levelPtr = level(lvl, lvlmode);
+    if(!levelPtr) { return -1; }
+    return static_cast<short>(findThingAt(*levelPtr,
+                                          static_cast<unsigned char>(x & 0xFF),
+                                          static_cast<unsigned char>(y & 0xFF)));
+}
+
+unsigned char LevelManager::mapToBytes(unsigned char * mapdata, Level * level) const
 {
     unsigned char highid = 0;
     for(std::size_t y = 0; y < MapHeight; ++y)
@@ -155,7 +155,7 @@ unsigned char MapToBytes(unsigned char * mapdata, Level * level)
     return highid;
 }
 
-unsigned char USBAttributeToByte(const USBAttributes & usbattr)
+unsigned char LevelManager::usbAttributeToByte(const USBAttributes & usbattr) const
 {
     unsigned char tbyte = 0;
     if(usbattr.gateway) { tbyte |= 0x08; }
@@ -176,5 +176,15 @@ unsigned char USBAttributeToByte(const USBAttributes & usbattr)
     return tbyte;
 }
 
-} // namespace level
-} // namespace blastmap
+unsigned char MapToBytes(unsigned char * mapdata, Level * level)
+{
+    return gLevelManager.mapToBytes(mapdata, level);
+}
+
+unsigned char USBAttributeToByte(const USBAttributes & usbattr)
+{
+    return gLevelManager.usbAttributeToByte(usbattr);
+}
+
+} // namespace blastmap::level
+

@@ -11,9 +11,11 @@ OBJS := $(COBJS) $(CXXOBJS)
 
 CC := gcc
 CXX := g++
-CFLAGS := -std=gnu99 -fcommon -g -Wall
-CXXFLAGS := -std=c++17 -fcommon -g -Wall
-LDLIBS := -pthread -lX11 -lGL -lGLU
+SDL_CFLAGS := $(shell sdl2-config --cflags)
+SDL_LIBS := $(shell sdl2-config --libs)
+CFLAGS := -std=gnu99 -fcommon -g -Wall $(SDL_CFLAGS)
+CXXFLAGS := -std=c++17 -fcommon -g -Wall $(SDL_CFLAGS)
+LDLIBS := -pthread $(SDL_LIBS) -lGL -lGLU
 
 .PHONY: all clean
 
