@@ -23,12 +23,11 @@ private:
     struct BlockItem
     {
         level::BlockID id = 0;
-        GLuint previewTexture = 0;
     };
 
     void ensureBlocks();
     void drawBlockList(int originX, int originY, int panelWidth, int panelHeight);
-    void drawBlockPreview(const BlockItem &item, float previewX, float previewY, float size);
+    void drawBlockPreview(level::Level *level, const BlockItem &item, float previewX, float previewY, float size);
 
     editor::State &m_editor;
     level::LevelManager &m_levelManager;

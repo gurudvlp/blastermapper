@@ -70,9 +70,6 @@ void BlockPanel::ensureBlocks()
     {
         BlockItem item{};
         item.id = static_cast<level::BlockID>(blockIndex);
-        unsigned char subblock = (*level).Blocks[blockIndex][0];
-        unsigned char ultra = (*level).SubBlocks[subblock][0];
-        item.previewTexture = (*level).USBTextures[ultra].texid;
         m_blocks.push_back(item);
     }
 }
@@ -85,6 +82,9 @@ void BlockPanel::drawBlockList(int originX, int originY, int panelWidth, int pan
     const float contentY = originY + kContentPadding;
     const float contentHeight = panelHeight - kHeaderHeight - (kContentPadding * 2);
     if(contentHeight <= 0.0f) { return; }
+
+    level::Level *level = m_levelManager.level(m_editor.level, m_editor.mode);
+    if(!level) { return; }
 
     const float stride = kItemHeight + kItemSpacing;
     const float totalItemHeight =
@@ -122,7 +122,7 @@ void BlockPanel::drawBlockList(int originX, int originY, int panelWidth, int pan
         const BlockItem &item = m_blocks[idx];
         float previewX = contentX + 4.0f;
         float previewY = drawY + (kItemHeight - kPreviewSize) * 0.5f;
-        drawBlockPreview(item, previewX, previewY, kPreviewSize);
+        drawBlockPreview(level, item, previewX, previewY, kPreviewSize);
 
         drawY -= (kItemHeight + kItemSpacing);
     }
@@ -156,22 +156,49 @@ void BlockPanel::drawBlockList(int originX, int originY, int panelWidth, int pan
 
 }
 
-void BlockPanel::drawBlockPreview(const BlockItem &item, float previewX, float previewY, float size)
+void BlockPanel::drawBlockPreview(level::Level *level,
+                                  const BlockItem &item,
+                                  float previewX,
+                                  float previewY,
+                                  float size)
 {
-    if(item.previewTexture == 0) { return; }
+    if(!level) { return; }
 
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, item.previewTexture);
+    const float cellSize = size / 4.0f;
+    for(int subY = 0; subY < 2; ++subY)
+    {
+        for(int subX = 0; subX < 2; ++subX)
+        {
+            level::SubBlockID subblock = (*level).Blocks[item.id][(subY * 2) + subX];
+            const auto &ultras = (*level).SubBlocks[subblock];
+            for(int y = 0; y < 2; ++y)
+            {
+                for(int x = 0; x < 2; ++x)
+                {
+                    level::UltraSubBlockID usblk = ultras[(y * 2) + x];
+                    GLuint texid = (*level).USBTextures[usblk].texid;
+                    if(texid == 0) { continue; }
 
-    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-    glBegin(GL_QUADS);
-        glTexCoord2f(0, 0); glVertex2f(previewX, previewY);
-        glTexCoord2f(1, 0); glVertex2f(previewX + size, previewY);
-        glTexCoord2f(1, 1); glVertex2f(previewX + size, previewY + size);
-        glTexCoord2f(0, 1); glVertex2f(previewX, previewY + size);
-    glEnd();
+                    float ultraX = previewX + ((subX * 2) + x) * cellSize;
+                    float ultraY = previewY + ((subY * 2 + y)) * cellSize;
+                    float invertedY = previewY + size - (ultraY - previewY) - cellSize;
 
-    glDisable(GL_TEXTURE_2D);
+                    glEnable(GL_TEXTURE_2D);
+                    glBindTexture(GL_TEXTURE_2D, texid);
+
+                    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+                    glBegin(GL_QUADS);
+                        glTexCoord2f(0, 0); glVertex2f(ultraX, invertedY);
+                        glTexCoord2f(1, 0); glVertex2f(ultraX + cellSize, invertedY);
+                        glTexCoord2f(1, 1); glVertex2f(ultraX + cellSize, invertedY + cellSize);
+                        glTexCoord2f(0, 1); glVertex2f(ultraX, invertedY + cellSize);
+                    glEnd();
+
+                    glDisable(GL_TEXTURE_2D);
+                }
+            }
+        }
+    }
 }
 
 } // namespace ui
