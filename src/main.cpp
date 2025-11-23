@@ -11,14 +11,13 @@
 #include <GL/glu.h>
 
 #include "main.hpp"
-#include "rom/loadrom.h"
-#include "rom/saverom.h"
+#include "rom/Rom.hpp"
 #include "view/Palette.hpp"
 #include "view/ViewBlock.hpp"
 #include "view/ViewMap.hpp"
 #include "view/ViewQuadrant.hpp"
 #include "view/ViewScreen.hpp"
-#include "level/levelinfo.h"
+#include "level/LevelInfo.hpp"
 
 extern "C" {
 bool SAVEROM_SHOW_LEVEL_POINTERS = false;
@@ -34,6 +33,7 @@ bool IsCmdOptionSet(int argc, char ** argv, const char option[])
 }
 
 namespace blastmap {
+using namespace level;
 namespace detail {
 
 enum class ZoomMode : int
@@ -412,7 +412,7 @@ void HandleKeyPress(detail::EditorState &editor, XKeyEvent *xke)
     if(code == 114) { editor.moveRight(); return; }
 
     if(code == 36) { editor.zoomIn(); return; }
-    if(code == 39) { SaveRom(); return; }
+    if(code == 39) { rom::SaveRom(); return; }
 
     if(code >= 10 && code <= 17)
     {
@@ -497,7 +497,7 @@ int Run(int argc, char **argv)
 
     InitializePalette();
 
-    if(!LoadRom(argv[1]))
+    if(!rom::LoadRom(argv[1]))
     {
         printf("Failed to load ROM.\n");
         return 1;
@@ -509,14 +509,14 @@ int Run(int argc, char **argv)
         {
             char option[12] = {};
             std::snprintf(option, sizeof(option), "things%d%d", lvl + 1, mode);
-            if(IsCmdOptionSet(argc, argv, option)) { PrintThings(lvl, mode); }
+            if(IsCmdOptionSet(argc, argv, option)) { rom::PrintThings(lvl, mode); }
         }
     }
 
     for(int el = 0; el < 8; ++el)
     {
-        LoadUSBTextures(el, 0);
-        LoadUSBTextures(el, 1);
+        rom::LoadUSBTextures(el, 0);
+        rom::LoadUSBTextures(el, 1);
     }
 
     detail::EditorState editor;
@@ -531,7 +531,7 @@ int Run(int argc, char **argv)
 
     if(IsCmdOptionSet(argc, argv, "save"))
     {
-        SaveRom();
+        rom::SaveRom();
         return 0;
     }
 
@@ -544,7 +544,7 @@ int Run(int argc, char **argv)
             return 1;
         }
         short bank = static_cast<short>(std::atoi(argv[4]));
-        Merge(argv[1], argv[3], bank);
+        rom::Merge(argv[1], argv[3], bank);
         return 0;
     }
 
@@ -555,8 +555,8 @@ int Run(int argc, char **argv)
     int el;
 	for(el = 0; el < 8; el++)
 	{
-		LoadUSBTextures(el, 0);
-		LoadUSBTextures(el, 1);
+		rom::LoadUSBTextures(el, 0);
+		rom::LoadUSBTextures(el, 1);
 	}
 
     while(true)

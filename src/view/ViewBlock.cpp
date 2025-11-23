@@ -7,16 +7,18 @@
 #include <GL/glu.h>
 
 #include "ViewBlock.hpp"
-#include "../level/leveltypes.h"
+#include "../level/Level.hpp"
 
 namespace
 {
+using namespace blastmap::level;
 void RenderBlock_Block(Level * level, BlockID blkid, int x, int y);
 void RenderBlock_SubBlock(Level * level, SubBlockID sblkid, int x, int y);
 void RenderBlock_UltraSubBlock(Level * level, UltraSubBlockID usblkid, int x, int y);
 } // namespace
 
 namespace blastmap {
+using namespace level;
 namespace view {
 
 void BlockRenderer::SetLevelMode(int lvl, int lvlmode)

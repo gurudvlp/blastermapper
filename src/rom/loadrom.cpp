@@ -1,6 +1,8 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
+#include <string>
+
 #include <X11/X.h>
 #include <X11/Xlib.h>
 #include <GL/gl.h>
@@ -8,119 +10,123 @@
 #include <GL/glu.h>
 
 #include "../main.hpp"
-#include "loadrom.h"
+#include "Rom.hpp"
 #include "../view/Palette.hpp"
-//#include "leveltypes.h"
+#include "../level/LevelInfo.hpp"
 
-bool LoadRom(char * romfile)
+namespace blastmap {
+using namespace level;
+namespace rom {
+
+FILE * RomFile = nullptr;
+std::array<std::array<unsigned char, SIZE_PRG_BANK>, COUNT_PRG_BANK> PrgRom = {};
+std::array<std::array<unsigned char, SIZE_CHR_BANK>, COUNT_CHR_BANK> ChrRom = {};
+std::array<unsigned char, SIZE_ROM_HEADER> RomHeader = {};
+
+void InitializeLevels();
+bool FindLevelPointers();
+bool LoadLevel(Level * level);
+void FindSpawnPoint(Level * level);
+void CreateUSBTextures(Level * level);
+
+bool LoadRom(const char * romfile)
 {
-	char rom[strlen(romfile) + 1];
-	strcpy(rom, romfile);
-	printf("Opening %s\n", rom);
-	
-	RomFile = fopen(rom, "rb");
+	if(romfile == nullptr) { return false; }
+	std::string rom(romfile);
+	std::printf("Opening %s\n", rom.c_str());
+
+	RomFile = std::fopen(rom.c_str(), "rb");
 	if(RomFile)
 	{
-		bzero(&RomHeader, 16);
-		//fgets((char *)&RomHeader, 16, (FILE *)RomFile);
-		fread(RomHeader, 16, 1, RomFile);
-		
-		if(RomHeader[0] != 0x4E
-		|| RomHeader[1] != 0x45
-		|| RomHeader[2] != 0x53
-		|| RomHeader[3] != 0x1A)
+		std::memset(RomHeader.data(), 0, RomHeader.size());
+		std::fread(RomHeader.data(), RomHeader.size(), 1, RomFile);
+
+		if(!(RomHeader[0] == 0x4E
+		&& RomHeader[1] == 0x45
+		&& RomHeader[2] == 0x53
+		&& RomHeader[3] == 0x1A))
 		{
-			fclose(RomFile);
-			printf("Invalid ROM file.\n");
-			exit(0);
+			std::fclose(RomFile);
+			std::printf("Invalid ROM file.\n");
+			std::exit(0);
 		}
-		
+
 		unsigned short prgsize = RomHeader[4];
 		unsigned short chrsize = RomHeader[5];
-		
+
 		if(prgsize != 8)
 		{
-			fclose(RomFile);
-			printf("This ROM does not have 8 PRGROM banks.\n");
-			exit(0);
+			std::fclose(RomFile);
+			std::printf("This ROM does not have 8 PRGROM banks.\n");
+			std::exit(0);
 		}
-		
+
 		if(chrsize != 16)
 		{
-			fclose(RomFile);
-			printf("This ROM does not have 16 CHRROM banks.\n");
-			exit(0);
+			std::fclose(RomFile);
+			std::printf("This ROM does not have 16 CHRROM banks.\n");
+			std::exit(0);
 		}
-		
-		
-		int ebank;
-		for(ebank = 0; ebank < 8; ebank++)
+
+		for(int ebank = 0; ebank < static_cast<int>(COUNT_PRG_BANK); ++ebank)
 		{
-			//fgets((char *)&PrgRom[ebank], 0x4000, (FILE *)RomFile);
-			fread(PrgRom[ebank], 0x4000, 1, RomFile);
+			std::fread(PrgRom[ebank].data(), SIZE_PRG_BANK, 1, RomFile);
 		}
-		
-		for(ebank = 0; ebank < 16; ebank++)
+
+		for(int ebank = 0; ebank < static_cast<int>(COUNT_CHR_BANK); ++ebank)
 		{
-			//fgets((char *)&ChrRom[ebank][0], 0x2000, (FILE *)RomFile);
-			fread(ChrRom[ebank], 0x2000, 1, RomFile);
+			std::fread(ChrRom[ebank].data(), SIZE_CHR_BANK, 1, RomFile);
 		}
-		
-		fclose(RomFile);
-		
-		printf("ROM successfully loaded to RAM.\n");
-		
+
+		std::fclose(RomFile);
+
+		std::printf("ROM successfully loaded to RAM.\n");
+
 		InitializeLevels();
-		
+
 		if(!FindLevelPointers())
 		{
-			printf("Could not determine the pointers to the level data.\n");
-			exit(0);
+			std::printf("Could not determine the pointers to the level data.\n");
+			std::exit(0);
 		}
-		
-		int el;
-		for(el = 0; el < 8; el++)
+
+		for(int el = 0; el < 8; ++el)
 		{
-			if(!LoadLevel((Level *)&Levels[el][0]))
+			if(!LoadLevel(&Levels[el][0]))
 			{
-				printf("Failed to load level %d (tank)\n", el); 
-				exit(0);
+				std::printf("Failed to load level %d (tank)\n", el);
+				std::exit(0);
 			}
-			
-			if(!LoadLevel((Level *)&Levels[el][1]))
+
+			if(!LoadLevel(&Levels[el][1]))
 			{
-				printf("Failed to load level %d (overhead)\n", el);
-				exit(0);
+				std::printf("Failed to load level %d (overhead)\n", el);
+				std::exit(0);
 			}
 		}
-		//printf("Level 0 ptr %04x\n", Levels[0][0].romlevelpointer);
-		//LoadLevel((Level *)&Levels[0][0]);
-		
-		printf("Levels successfully loaded.\n");
+
+		std::printf("Levels successfully loaded.\n");
 	}
 	else
 	{
-		printf("File does not exist!\n");
-		exit(0);
+		std::printf("File does not exist!\n");
+		std::exit(0);
 	}
-	
+
 	return true;
 }
 
 void InitializeLevels()
 {
-	int el;
-	
-	for(el = 0; el < 8; el++)
+	for(int el = 0; el < static_cast<int>(LevelCount); ++el)
 	{
-		bzero(&Levels[el][0], sizeof(Level));
-		bzero(&Levels[el][1], sizeof(Level));
-		
+		Levels[el][0] = Level{};
+		Levels[el][1] = Level{};
+
 		Levels[el][0].levelid = el;
 		Levels[el][1].levelid = el;
-		Levels[el][0].leveltype = LevelType_Tank;
-		Levels[el][1].leveltype = LevelType_Overhead;
-		
+		Levels[el][0].leveltype = LevelType::Tank;
+		Levels[el][1].leveltype = LevelType::Overhead;
 	}
 }
 
@@ -143,7 +149,7 @@ bool FindLevelPointers()
 		addr += PrgRom[0][(el * 4)];
 		addr -= 0x8000;
 		Levels[el][0].romlevelpointer = addr;
-		//printf("Level %d start pointer: 0x%04x\n", el, addr);
+		//std::printf("Level %d start pointer: 0x%04x\n", el, addr);
 		
 		addr = PrgRom[0][(el * 4) + 3] << 8;
 		addr += PrgRom[0][(el * 4) + 2];
@@ -349,7 +355,7 @@ bool LoadLevel(Level * level)
 	//		Map
 	
 	int bank = 0;
-	if((*level).leveltype == LevelType_Tank)
+	if((*level).leveltype == LevelType::Tank)
 	{
 		if((*level).levelid < 5) { bank = 0; }
 		else { bank = 1; }
@@ -362,7 +368,7 @@ bool LoadLevel(Level * level)
 	
 	
 	//	Load the data pointers
-	//printf("Load level %d starting at 0x%04x\n", (*level).levelid, (*level).romlevelpointer);
+	//std::printf("Load level %d starting at 0x%04x\n", (*level).levelid, (*level).romlevelpointer);
 	(*level).datapointers.palette = PrgRom[bank][(*level).romlevelpointer + 1] << 8;
 	(*level).datapointers.palette += PrgRom[bank][(*level).romlevelpointer];
 	(*level).datapointers.palette -= 0x8000;
@@ -407,7 +413,7 @@ bool LoadLevel(Level * level)
 	unsigned short highblockid = 0;
 	unsigned short basemapaddr = (*level).datapointers.map;
 	
-	//printf("Map address is: %04x / %04x\n", basemapaddr, basemapaddr + 0x8000);
+	//std::printf("Map address is: %04x / %04x\n", basemapaddr, basemapaddr + 0x8000);
 	
 	for(y = 0; y < 32; y++)
 	{
@@ -418,7 +424,7 @@ bool LoadLevel(Level * level)
 		}
 	}
 	
-	//printf("Level %d: Highest BlockID %d\n", (*level).levelid, highblockid);
+	//std::printf("Level %d: Highest BlockID %d\n", (*level).levelid, highblockid);
 	
 	unsigned short highsbid = 0;
 	unsigned short baseblockaddr = (*level).datapointers.blocktable;
@@ -438,7 +444,7 @@ bool LoadLevel(Level * level)
 		if((*level).Blocks[x][3] > highsbid) { highsbid = (*level).Blocks[x][3]; }
 	}
 	
-	//printf("Level %d: Highest SubBlockID %d\n", (*level).levelid, highsbid);
+	//std::printf("Level %d: Highest SubBlockID %d\n", (*level).levelid, highsbid);
 	
 	unsigned short highusbid = 0;
 	unsigned short basesbaddr = (*level).datapointers.sbtable;
@@ -458,7 +464,7 @@ bool LoadLevel(Level * level)
 		if((*level).SubBlocks[x][3] > highusbid) { highusbid = (*level).SubBlocks[x][3]; }
 	}
 	
-	//printf("Level %d: Highest UltraSubBlockID %d\n", (*level).levelid, highusbid);
+	//std::printf("Level %d: Highest UltraSubBlockID %d\n", (*level).levelid, highusbid);
 	
 	unsigned short baseusbaddr = (*level).datapointers.usbtable;
 	
@@ -477,7 +483,7 @@ bool LoadLevel(Level * level)
 	{
 		unsigned char tbyte = PrgRom[bank][baseusba + x];
 		
-		if((*level).leveltype == LevelType_Overhead)
+		if((*level).leveltype == LevelType::Overhead)
 		{
 			if((tbyte & 0x14) == 0x14) { (*level).USBAttributeTable[x].ice = true; }
 			else { (*level).USBAttributeTable[x].ice = false; }
@@ -503,7 +509,7 @@ bool LoadLevel(Level * level)
 		if((tbyte & 0x02) == 0x02) { (*level).USBAttributeTable[x].subpalette += 2; }
 	}
 	
-	//printf("Level %d: Ultra Sub Block Attributes loaded\n", (*level).levelid);
+	//std::printf("Level %d: Ultra Sub Block Attributes loaded\n", (*level).levelid);
 	
 	//	And the scroll table
 	unsigned short basestaddr = (*level).datapointers.scrolltable;
@@ -513,7 +519,7 @@ bool LoadLevel(Level * level)
 		(*level).ScrollTable[x] = PrgRom[bank][basestaddr + x];
 	}
 	
-	//printf("Level %d: Scroll table loaded (but not understood yet)\n", (*level).levelid);
+	//std::printf("Level %d: Scroll table loaded (but not understood yet)\n", (*level).levelid);
 	
 	//	Load the list of things
 	
@@ -538,7 +544,7 @@ bool LoadLevel(Level * level)
 	
 	//	Load spawn point
 	FindSpawnPoint(level);
-	//printf("Level %d: Spawn (%02x, %02x)\n", level->levelid, level->SpawnPoint.x, level->SpawnPoint.y);
+	//std::printf("Level %d: Spawn (%02x, %02x)\n", level->levelid, level->SpawnPoint.x, level->SpawnPoint.y);
 	
 	return true;
 }
@@ -558,11 +564,11 @@ void LoadUSBTextures(int level, int lvlmode)
 
 void CreateUSBTextures(Level * level)
 {
-	//printf("Level %d: Creating textures\n", (*level).levelid);
+	//std::printf("Level %d: Creating textures\n", (*level).levelid);
 	unsigned short offset = 0x00;
 	int bank = 0;
 	
-	if((*level).leveltype == LevelType_Tank)
+	if((*level).leveltype == LevelType::Tank)
 	{
 		if((*level).levelid == 0) { bank = 4; }
 		if((*level).levelid == 1) { bank = 4; offset = 0x1000; }
@@ -619,7 +625,7 @@ void CreateUSBTextures(Level * level)
 	int eusb;
 	for(eusb = 0; eusb < 256; eusb++)
 	{
-		//printf("\tUSB %d\n", eusb);
+		//std::printf("\tUSB %d\n", eusb);
 		glGenTextures(1, &(*level).USBTextures[eusb].texid);
 		glBindTexture(GL_TEXTURE_2D, (*level).USBTextures[eusb].texid);
 		
@@ -635,7 +641,7 @@ void CreateUSBTextures(Level * level)
 		{
 			for(x = 0; x < 8; x++)
 			{
-				//printf("\t\tUSB x,y: %d, %d\n", x, y);
+				//std::printf("\t\tUSB x,y: %d, %d\n", x, y);
 				unsigned char chr = (*level).UltraSubBlocks[eusb][0];
 				unsigned char chrcol = tiledata[chr][x][y];
 				unsigned char pixcol = upal[chrcol];
@@ -658,7 +664,7 @@ void CreateUSBTextures(Level * level)
 		{
 			for(x = 0; x < 8; x++)
 			{
-				//printf("\t\tUSB x,y: %d, %d\n", x, y);
+				//std::printf("\t\tUSB x,y: %d, %d\n", x, y);
 				unsigned char chr = (*level).UltraSubBlocks[eusb][1];
 				unsigned char chrcol = tiledata[chr][x][y];
 				unsigned char pixcol = upal[chrcol];
@@ -682,7 +688,7 @@ void CreateUSBTextures(Level * level)
 		{
 			for(x = 0; x < 8; x++)
 			{
-				//printf("\t\tUSB x,y: %d, %d\n", x, y);
+				//std::printf("\t\tUSB x,y: %d, %d\n", x, y);
 				unsigned char chr = (*level).UltraSubBlocks[eusb][2];
 				unsigned char chrcol = tiledata[chr][x][y];
 				unsigned char pixcol = upal[chrcol];
@@ -705,7 +711,7 @@ void CreateUSBTextures(Level * level)
 		{
 			for(x = 0; x < 8; x++)
 			{
-				//printf("\t\tUSB x,y: %d, %d\n", x, y);
+				//std::printf("\t\tUSB x,y: %d, %d\n", x, y);
 				unsigned char chr = (*level).UltraSubBlocks[eusb][3];
 				unsigned char chrcol = tiledata[chr][x][y];
 				unsigned char pixcol = upal[chrcol];
@@ -731,7 +737,7 @@ void CreateUSBTextures(Level * level)
 						GL_LINEAR);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 16, 
 						16, 0, GL_RGBA, GL_UNSIGNED_BYTE, 
-						(*level).USBTextures[eusb].data);
+						(*level).USBTextures[eusb].data.data());
 	}
 }
 
@@ -743,7 +749,7 @@ void FindSpawnPoint(Level * level)
 	unsigned short addr = 0x0000;
 	unsigned short bank = 7;
 	
-	if(level->leveltype == LevelType_Overhead) { addr = 0x05A2; }
+	if(level->leveltype == LevelType::Overhead) { addr = 0x05A2; }
 	else { addr = 0x0A3B; }
 	
 	addr += level->levelid * 2;
@@ -759,14 +765,14 @@ void PrintThings(int level, unsigned char leveltype)
 	
 	Level * lvl = (Level *)&Levels[level][leveltype];
 	
-	printf("Thing list for level %d (mode %x)\n", level, leveltype);
+	std::printf("Thing list for level %d (mode %x)\n", level, leveltype);
 	
 	int x;
 	for(x = 0; x < 512; x++)
 	{
 		if((*lvl).Things[x].thingtype == 0xFF) { break; }
 		
-		printf("Thing %d: Type: %02x\t(%02x, %02x)\n",
+		std::printf("Thing %d: Type: %02x\t(%02x, %02x)\n",
 			x,
 			(*lvl).Things[x].thingtype,
 			(*lvl).Things[x].x,
@@ -775,10 +781,13 @@ void PrintThings(int level, unsigned char leveltype)
 	}
 }
 
-void PrintLevelPointer(char * text, unsigned char * bytes)
+void PrintLevelPointer(const char * text, const unsigned char * bytes)
 {
 	if(SAVEROM_SHOW_LEVEL_POINTERS)
 	{
-		printf("%s: %02x %02x\n", text, bytes[0], bytes[1]);
+		std::printf("%s: %02x %02x\n", text, bytes[0], bytes[1]);
 	}
 }
+
+} // namespace rom
+} // namespace blastmap

@@ -10,11 +10,12 @@
 
 #include "ViewMap.hpp"
 #include "Palette.hpp"
-#include "../level/leveltypes.h"
-#include "../level/levelinfo.h"
+#include "../level/Level.hpp"
+#include "../level/LevelInfo.hpp"
 
 namespace
 {
+using namespace blastmap::level;
 void RenderMap_Block(Level * level, BlockID blkid, int x, int y, unsigned char darken);
 void RenderMap_SubBlock(Level * level, SubBlockID sblkid, int x, int y);
 void RenderMap_UltraSubBlock(Level * level, UltraSubBlockID usblkid, int x, int y);
@@ -24,6 +25,7 @@ void QuadScreenCoords(int x, int y, float * sx, float * sy, float * ex, float * 
 } // namespace
 
 namespace blastmap {
+using namespace level;
 namespace view {
 
 void MapRenderer::SetLevelMode(int lvl, int lvlmode)

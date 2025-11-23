@@ -8,10 +8,11 @@
 #include <GL/glu.h>
 
 #include "ViewQuadrant.hpp"
-#include "../level/leveltypes.h"
-#include "../level/levelinfo.h"
+#include "../level/Level.hpp"
+#include "../level/LevelInfo.hpp"
 namespace
 {
+using namespace blastmap::level;
 void RenderQuadrant_Block(Level * level, BlockID blkid, int x, int y);
 void RenderQuadrant_SubBlock(Level * level, SubBlockID sblkid, int x, int y);
 void RenderQuadrant_UltraSubBlock(Level * level, UltraSubBlockID usblkid, int x, int y);
@@ -19,6 +20,7 @@ void RenderQuadrant_SpawnPoint(Level * level, int quadrant);
 } // namespace
 
 namespace blastmap {
+using namespace level;
 namespace view {
 
 void QuadrantRenderer::SetLevelMode(int lvl, int lvlmode)

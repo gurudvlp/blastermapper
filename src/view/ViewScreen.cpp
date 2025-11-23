@@ -8,11 +8,12 @@
 #include <GL/glu.h>
 
 #include "ViewScreen.hpp"
-#include "../level/leveltypes.h"
-#include "../level/levelinfo.h"
+#include "../level/Level.hpp"
+#include "../level/LevelInfo.hpp"
 
 namespace
 {
+using namespace blastmap::level;
 void RenderScreen_Block(Level * level, BlockID blkid, int x, int y);
 void RenderScreen_SubBlock(Level * level, SubBlockID sblkid, int x, int y);
 void RenderScreen_UltraSubBlock(Level * level, UltraSubBlockID usblkid, int x, int y);
@@ -20,6 +21,7 @@ void RenderScreen_SpawnPoint(Level * level, int screen);
 } // namespace
 
 namespace blastmap {
+using namespace level;
 namespace view {
 
 void ScreenRenderer::SetLevelMode(int lvl, int lvlmode)
