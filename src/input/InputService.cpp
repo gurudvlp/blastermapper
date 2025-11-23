@@ -1,26 +1,27 @@
 #include "InputService.hpp"
 
-#include <cstdio>
-#include <algorithm>
-
-#include "../level/LevelInfo.hpp"
+#include <cmath>
 
 namespace blastmap {
 namespace input {
-using namespace level;
 
 InputService::InputService(editor::State &editor,
-                           view::EditorRenderer &renderer,
                            rom::Rom &rom,
                            event::EventManager &eventManager)
     : m_editor(editor)
-    , m_renderer(renderer)
     , m_rom(rom)
     , m_eventManager(eventManager)
 {
     std::fill(m_previousKeyState.begin(), m_previousKeyState.end(), 0);
     loadDefaultMappings();
     initializeKeyboardState();
+
+    m_eventManager.subscribe<event::MouseWheelEvent>(
+        [this](const event::MouseWheelEvent &payload) { onMouseWheel(payload); });
+    m_eventManager.subscribe<event::MouseButtonEvent>(
+        [this](const event::MouseButtonEvent &payload) { onMouseButton(payload); });
+    m_eventManager.subscribe<event::MouseMotionEvent>(
+        [this](const event::MouseMotionEvent &payload) { onMouseMotion(payload); });
 }
 
 bool InputService::tick()
@@ -35,7 +36,6 @@ bool InputService::tick()
         bool isDown = currentState[binding.scancode];
         if(isDown && !previouslyDown)
         {
-            m_eventManager.publish(event::KeyDownEvent{binding.key, binding.scancode});
             if(!handleKey(binding.key)) { return false; }
         }
         m_previousKeyState[binding.scancode] = static_cast<Uint8>(isDown);
@@ -46,23 +46,13 @@ bool InputService::tick()
 
 bool InputService::handleKey(SDL_Keycode key)
 {
-    const unsigned char currentSelectedX = m_renderer.SelectedBlockX();
-    const unsigned char currentSelectedY = m_renderer.SelectedBlockY();
+    if(key == SDLK_ESCAPE) { return false; }
 
-    if(key == SDLK_ESCAPE)
+    if(key == SDLK_s)
     {
-        if(m_editor.zoom == editor::ZoomMode::Map) { return false; }
-        m_editor.zoomOut();
+        m_rom.save();
         return true;
     }
-
-    if(key == SDLK_UP) { m_editor.moveUp(); return true; }
-    if(key == SDLK_DOWN) { m_editor.moveDown(); return true; }
-    if(key == SDLK_LEFT) { m_editor.moveLeft(); return true; }
-    if(key == SDLK_RIGHT) { m_editor.moveRight(); return true; }
-
-    if(key == SDLK_RETURN || key == SDLK_KP_ENTER) { m_editor.zoomIn(); return true; }
-    if(key == SDLK_s) { m_rom.save(); return true; }
 
     if(key >= SDLK_1 && key <= SDLK_8)
     {
@@ -76,107 +66,135 @@ bool InputService::handleKey(SDL_Keycode key)
         return true;
     }
 
-    if(m_editor.zoom == editor::ZoomMode::Screen)
+    return true;
+}
+
+void InputService::onMouseWheel(const event::MouseWheelEvent &wheel)
+{
+    if(wheel.y == 0 && wheel.x == 0) { return; }
+
+    int width = 0;
+    int height = 0;
+    if(!getWindowSize(width, height) || width == 0 || height == 0) { return; }
+
+    int mouseX = 0;
+    int mouseY = 0;
+    SDL_GetMouseState(&mouseX, &mouseY);
+
+    float normX = screenToNormalizedX(mouseX, width);
+    float normY = screenToNormalizedY(mouseY, height);
+    const float previousHalfWorld = editor::State::MapHalf / m_editor.viewZoom;
+    const float anchorX = m_editor.viewCenterX + normX * previousHalfWorld;
+    const float anchorY = m_editor.viewCenterY + normY * previousHalfWorld;
+
+    float scrollAmount = wheel.y != 0 ? static_cast<float>(wheel.y)
+                                       : static_cast<float>(wheel.x);
+    float zoomDelta = std::pow(kZoomFactor, scrollAmount);
+    float newZoom = std::clamp(m_editor.viewZoom * zoomDelta, kMinZoom, kMaxZoom);
+    m_editor.viewZoom = newZoom;
+
+    const float halfWorld = editor::State::MapHalf / m_editor.viewZoom;
+    m_editor.viewCenterX = anchorX - normX * halfWorld;
+    m_editor.viewCenterY = anchorY - normY * halfWorld;
+    clampCameraCenter();
+}
+
+void InputService::onMouseButton(const event::MouseButtonEvent &button)
+{
+    if(button.button != SDL_BUTTON_RIGHT) { return; }
+
+    if(button.state == SDL_PRESSED)
     {
-        if(key == SDLK_KP_8 || key == SDLK_RIGHTBRACKET)
-        {
-            unsigned char block = gLevelManager.blockAt(m_editor.level, m_editor.mode, currentSelectedX, currentSelectedY);
-            if(block == 0xFF) { block = 0x00; }
-            else if(block == gLevelManager.highestBlockID(m_editor.level, m_editor.mode)) { block = 0x00; }
-            else { block++; }
-            gLevelManager.setBlockAt(m_editor.level, m_editor.mode, currentSelectedX, currentSelectedY, block);
-            return true;
-        }
+        m_rightButtonDown = true;
+        int width = 0;
+        int height = 0;
+        if(!getWindowSize(width, height) || width == 0 || height == 0) { return; }
+        float normX = screenToNormalizedX(button.x, width);
+        float normY = screenToNormalizedY(button.y, height);
+        const float halfWorld = editor::State::MapHalf / m_editor.viewZoom;
+        m_dragAnchorX = m_editor.viewCenterX + normX * halfWorld;
+        m_dragAnchorY = m_editor.viewCenterY + normY * halfWorld;
+    }
+    else if(button.state == SDL_RELEASED)
+    {
+        m_rightButtonDown = false;
+    }
+}
 
-        if(key == SDLK_KP_2 || key == SDLK_LEFTBRACKET)
-        {
-            unsigned char block = gLevelManager.blockAt(m_editor.level, m_editor.mode, currentSelectedX, currentSelectedY);
-            if(block == 0x00) { block = gLevelManager.highestBlockID(m_editor.level, m_editor.mode); }
-            else { block--; }
-            gLevelManager.setBlockAt(m_editor.level, m_editor.mode, currentSelectedX, currentSelectedY, block);
-            return true;
-        }
+void InputService::onMouseMotion(const event::MouseMotionEvent &motion)
+{
+    if(!m_rightButtonDown) { return; }
 
-        if(key == SDLK_c)
-        {
-            gLevelManager.setBlockClipboard(
-                gLevelManager.blockAt(m_editor.level, m_editor.mode, currentSelectedX, currentSelectedY)
-            );
-            return true;
-        }
+    int width = 0;
+    int height = 0;
+    if(!getWindowSize(width, height) || width == 0 || height == 0) { return; }
 
-        if(key == SDLK_v)
-        {
-            gLevelManager.setBlockAt(m_editor.level, m_editor.mode, currentSelectedX, currentSelectedY, gLevelManager.blockClipboard());
-            return true;
-        }
+    float normX = screenToNormalizedX(motion.x, width);
+    float normY = screenToNormalizedY(motion.y, height);
+    const float halfWorld = editor::State::MapHalf / m_editor.viewZoom;
 
-        if(key == SDLK_KP_PLUS || key == SDLK_EQUALS)
-        {
-            unsigned short spx = (currentSelectedX * 4) + 1;
-            unsigned short spy = (currentSelectedY * 4) + 1;
-            gLevelManager.setSpawnPoint(m_editor.level, m_editor.mode, spx, spy);
-            return true;
-        }
+    m_editor.viewCenterX = m_dragAnchorX - normX * halfWorld;
+    m_editor.viewCenterY = m_dragAnchorY - normY * halfWorld;
+    clampCameraCenter();
+}
 
-        if(key == SDLK_t)
-        {
-            unsigned short sbx = (currentSelectedX * 4);
-            unsigned short sby = (currentSelectedY * 4);
-            for(int tx = 0; tx < 4; ++tx)
-            {
-                for(int ty = 0; ty < 4; ++ty)
-                {
-                    short thing = gLevelManager.thingAt(m_editor.level, m_editor.mode, sbx + tx, sby + ty);
-                    if(thing >= 0) { std::printf("Thing found: %d\n", thing); }
-                    m_editor.thing = static_cast<unsigned short>(thing < 0 ? 0 : thing);
-                }
-            }
-            return true;
-        }
+float InputService::screenToNormalizedX(int x, int width) const
+{
+    if(width == 0) { return 0.0f; }
+    return (static_cast<float>(x) / static_cast<float>(width)) * 2.0f - 1.0f;
+}
+
+float InputService::screenToNormalizedY(int y, int height) const
+{
+    if(height == 0) { return 0.0f; }
+    return 1.0f - (static_cast<float>(y) / static_cast<float>(height)) * 2.0f;
+}
+
+bool InputService::getWindowSize(int &width, int &height) const
+{
+    SDL_Window * window = SDL_GL_GetCurrentWindow();
+    if(!window)
+    {
+        width = height = 0;
+        return false;
     }
 
+    SDL_GetWindowSize(window, &width, &height);
     return true;
+}
+
+void InputService::clampCameraCenter()
+{
+    const float halfWorld = editor::State::MapHalf / m_editor.viewZoom;
+    const float mapDimension = editor::State::MapDimension;
+    const float mapHalf = editor::State::MapHalf;
+
+    auto clampAxis = [&](float center) {
+        if(halfWorld >= mapHalf) { return mapHalf; }
+        return std::clamp(center, halfWorld, mapDimension - halfWorld);
+    };
+
+    m_editor.viewCenterX = clampAxis(m_editor.viewCenterX);
+    m_editor.viewCenterY = clampAxis(m_editor.viewCenterY);
 }
 
 void InputService::loadDefaultMappings()
 {
     auto addBinding = [this](const std::string &name, SDL_Keycode key) {
-        if(m_keyBindings.emplace(name, key).second)
-        {
-            monitorKey(key);
-        }
+        if(m_keyBindings.emplace(name, key).second) { monitorKey(key); }
     };
 
-    addBinding("ZoomInMain", SDLK_RETURN);
-    addBinding("ZoomInPad", SDLK_KP_ENTER);
-    addBinding("ZoomOut", SDLK_ESCAPE);
+    addBinding("Exit", SDLK_ESCAPE);
     addBinding("Save", SDLK_s);
-    addBinding("MoveUp", SDLK_UP);
-    addBinding("MoveDown", SDLK_DOWN);
-    addBinding("MoveLeft", SDLK_LEFT);
-    addBinding("MoveRight", SDLK_RIGHT);
-
-    // Track additional keys that don't need explicit named bindings
-    monitorKey(SDLK_0);
-    monitorKey(SDLK_1);
-    monitorKey(SDLK_2);
-    monitorKey(SDLK_3);
-    monitorKey(SDLK_4);
-    monitorKey(SDLK_5);
-    monitorKey(SDLK_6);
-    monitorKey(SDLK_7);
-    monitorKey(SDLK_8);
-    monitorKey(SDLK_KP_8);
-    monitorKey(SDLK_KP_2);
-    monitorKey(SDLK_RIGHTBRACKET);
-    monitorKey(SDLK_LEFTBRACKET);
-    monitorKey(SDLK_c);
-    monitorKey(SDLK_v);
-    monitorKey(SDLK_KP_PLUS);
-    monitorKey(SDLK_EQUALS);
-    monitorKey(SDLK_t);
-    // TODO: load key mappings from disk/config to allow remapping in the future.
+    addBinding("Level1", SDLK_1);
+    addBinding("Level2", SDLK_2);
+    addBinding("Level3", SDLK_3);
+    addBinding("Level4", SDLK_4);
+    addBinding("Level5", SDLK_5);
+    addBinding("Level6", SDLK_6);
+    addBinding("Level7", SDLK_7);
+    addBinding("Level8", SDLK_8);
+    addBinding("ModeToggle", SDLK_0);
 }
 
 void InputService::monitorKey(SDL_Keycode key)

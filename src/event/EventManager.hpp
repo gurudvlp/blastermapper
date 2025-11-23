@@ -18,6 +18,26 @@ struct KeyDownEvent {
     SDL_Scancode scancode;
 };
 
+struct MouseWheelEvent {
+    int x;
+    int y;
+};
+
+struct MouseButtonEvent {
+    Uint8 button;
+    Uint8 state;
+    int x;
+    int y;
+};
+
+struct MouseMotionEvent {
+    int x;
+    int y;
+    int xrel;
+    int yrel;
+    Uint32 state;
+};
+
 struct WindowEvent {
     SDL_Event event;
 };

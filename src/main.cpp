@@ -14,10 +14,6 @@
 #include "rom/Rom.hpp"
 #include "view/EditorRenderer.hpp"
 #include "view/Palette.hpp"
-#include "view/ViewBlock.hpp"
-#include "view/ViewMap.hpp"
-#include "view/ViewQuadrant.hpp"
-#include "view/ViewScreen.hpp"
 #include "window/WindowService.hpp"
 #include "event/SDLEventService.hpp"
 #include "level/LevelInfo.hpp"
@@ -41,18 +37,6 @@ using namespace level;
 namespace {
 rom::Rom gRom;
 }
-void GetCmdEditorCoords(int argc, char ** argv, editor::State &state)
-{
-    for(int x = 0; x < 128; ++x)
-    {
-        char instr[16] = {};
-        std::snprintf(instr, sizeof(instr), "x%d", x);
-        if(IsCmdOptionSet(argc, argv, instr)) { state.x = x; }
-
-        std::snprintf(instr, sizeof(instr), "y%d", x);
-        if(IsCmdOptionSet(argc, argv, instr)) { state.y = x; }
-    }
-}
 
 void ApplyCommandLineOptions(editor::State &state, int argc, char **argv)
 {
@@ -69,20 +53,6 @@ void ApplyCommandLineOptions(editor::State &state, int argc, char **argv)
             }
         }
     }
-
-    for(int quad = 0; quad < 4; ++quad)
-    {
-        char quadOpt[8];
-        std::snprintf(quadOpt, sizeof(quadOpt), "quad%d", quad);
-        if(IsCmdOptionSet(argc, argv, quadOpt)) { state.quadrant = quad; }
-    }
-
-    if(IsCmdOptionSet(argc, argv, "zoommap")) { state.zoom = editor::ZoomMode::Map; }
-    if(IsCmdOptionSet(argc, argv, "zoomquadrant")) { state.zoom = editor::ZoomMode::Quadrant; }
-    if(IsCmdOptionSet(argc, argv, "zoomscreen")) { state.zoom = editor::ZoomMode::Screen; }
-    if(IsCmdOptionSet(argc, argv, "zoomblock")) { state.zoom = editor::ZoomMode::Block; }
-
-    GetCmdEditorCoords(argc, argv, state);
 
     if(IsCmdOptionSet(argc, argv, "levelpointers")) { SAVEROM_SHOW_LEVEL_POINTERS = true; }
     else { SAVEROM_SHOW_LEVEL_POINTERS = false; }
@@ -161,7 +131,7 @@ int Run(int argc, char **argv)
         std::make_unique<event::SDLEventService>(engine.eventManager());
     engine.registerService(std::move(sdlEventService));
     auto inputService =
-        std::make_unique<input::InputService>(editor, renderer, gRom, engine.eventManager());
+        std::make_unique<input::InputService>(editor, gRom, engine.eventManager());
     engine.registerService(std::move(inputService));
     engine.run();
 
