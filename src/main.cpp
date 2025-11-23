@@ -10,6 +10,7 @@
 #include "editor/EditorState.hpp"
 #include "platform/Window.hpp"
 #include "rom/Rom.hpp"
+#include "view/EditorRenderer.hpp"
 #include "view/Palette.hpp"
 #include "view/ViewBlock.hpp"
 #include "view/ViewMap.hpp"
@@ -36,42 +37,6 @@ using namespace level;
 namespace {
 rom::Rom gRom;
 }
-namespace {
-view::MapRenderer g_mapRenderer;
-view::QuadrantRenderer g_quadrantRenderer;
-view::ScreenRenderer g_screenRenderer;
-view::BlockRenderer g_blockRenderer;
-} // namespace
-
-void RenderEditor(const editor::State &state)
-{
-    switch(state.zoom)
-    {
-        case editor::ZoomMode::Map:
-            g_mapRenderer.SetLevelMode(state.level, state.mode);
-            g_mapRenderer.SetSelection(state.xSelect, state.ySelect);
-            g_mapRenderer.Render(0x01);
-            break;
-        case editor::ZoomMode::Quadrant:
-            g_quadrantRenderer.SetLevelMode(state.level, state.mode);
-            g_quadrantRenderer.SetQuadrant(state.quadrant);
-            g_quadrantRenderer.SetSelection(state.xSelect, state.ySelect);
-            g_quadrantRenderer.Render(0x01);
-            break;
-        case editor::ZoomMode::Screen:
-            g_screenRenderer.SetLevelMode(state.level, state.mode);
-            g_screenRenderer.SetScreen((state.y * 8) + state.x);
-            g_screenRenderer.SetSelection(state.xSelect, state.ySelect);
-            g_screenRenderer.Render(0x01);
-            break;
-        case editor::ZoomMode::Block:
-            g_blockRenderer.SetLevelMode(state.level, state.mode);
-            g_blockRenderer.SetBlock((state.y * 32) + state.x);
-            g_blockRenderer.Render();
-            break;
-    }
-}
-
 void GetCmdEditorCoords(int argc, char ** argv, editor::State &state)
 {
     for(int x = 0; x < 128; ++x)
@@ -119,11 +84,10 @@ void ApplyCommandLineOptions(editor::State &state, int argc, char **argv)
     else { SAVEROM_SHOW_LEVEL_POINTERS = false; }
 }
 
-bool HandleKeyPress(editor::State &editor, SDL_Keycode key)
+bool HandleKeyPress(editor::State &editor, SDL_Keycode key, const view::EditorRenderer &renderer)
 {
-    auto &screenRenderer = g_screenRenderer;
-    const unsigned char currentSelectedX = screenRenderer.SelectedBlockX();
-    const unsigned char currentSelectedY = screenRenderer.SelectedBlockY();
+    const unsigned char currentSelectedX = renderer.SelectedBlockX();
+    const unsigned char currentSelectedY = renderer.SelectedBlockY();
 
     if(key == SDLK_ESCAPE)
     {
@@ -276,6 +240,8 @@ int Run(int argc, char **argv)
     if(!window.initialize()) { return 1; }
     window.setupGL();
 
+    view::EditorRenderer renderer;
+
     printf("Creating textures from CHR ROM\n");
     for(int el = 0; el < 8; el++)
     {
@@ -283,7 +249,7 @@ int Run(int argc, char **argv)
         gRom.loadUSBTextures(el, 1);
     }
 
-    RenderEditor(editor);
+    renderer.Render(editor);
     window.swapBuffers();
 
     bool running = true;
@@ -306,14 +272,14 @@ int Run(int argc, char **argv)
                 {
                     window.resize(sdlEvent.window.data1, sdlEvent.window.data2);
                     glViewport(0, 0, window.width(), window.height());
-                    RenderEditor(editor);
+                    renderer.Render(editor);
                     window.swapBuffers();
                 }
             }
             else if(sdlEvent.type == SDL_KEYDOWN)
             {
-                bool shouldContinue = HandleKeyPress(editor, sdlEvent.key.keysym.sym);
-                RenderEditor(editor);
+                bool shouldContinue = HandleKeyPress(editor, sdlEvent.key.keysym.sym, renderer);
+                renderer.Render(editor);
                 window.swapBuffers();
                 if(!shouldContinue)
                 {
