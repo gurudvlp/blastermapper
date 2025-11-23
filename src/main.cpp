@@ -1,12 +1,15 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 
 #include <SDL2/SDL.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
 
 #include "main.hpp"
+#include "Engine.hpp"
+#include "input/InputService.hpp"
 #include "editor/EditorState.hpp"
 #include "platform/Window.hpp"
 #include "rom/Rom.hpp"
@@ -84,101 +87,6 @@ void ApplyCommandLineOptions(editor::State &state, int argc, char **argv)
     else { SAVEROM_SHOW_LEVEL_POINTERS = false; }
 }
 
-bool HandleKeyPress(editor::State &editor, SDL_Keycode key, const view::EditorRenderer &renderer)
-{
-    const unsigned char currentSelectedX = renderer.SelectedBlockX();
-    const unsigned char currentSelectedY = renderer.SelectedBlockY();
-
-    if(key == SDLK_ESCAPE)
-    {
-        if(editor.zoom == editor::ZoomMode::Map) { return false; }
-        editor.zoomOut();
-        return true;
-    }
-
-    if(key == SDLK_UP) { editor.moveUp(); return true; }
-    if(key == SDLK_DOWN) { editor.moveDown(); return true; }
-    if(key == SDLK_LEFT) { editor.moveLeft(); return true; }
-    if(key == SDLK_RIGHT) { editor.moveRight(); return true; }
-
-    if(key == SDLK_RETURN || key == SDLK_KP_ENTER) { editor.zoomIn(); return true; }
-    if(key == SDLK_s) { gRom.save(); return true; }
-
-    if(key >= SDLK_1 && key <= SDLK_8)
-    {
-        editor.level = static_cast<int>(key - SDLK_1);
-        return true;
-    }
-
-    if(key == SDLK_0)
-    {
-        editor.mode = (editor.mode == 0) ? 1 : 0;
-        return true;
-    }
-
-    if(editor.zoom == editor::ZoomMode::Screen)
-    {
-        if(key == SDLK_KP_8 || key == SDLK_RIGHTBRACKET)
-        {
-            unsigned char block = gLevelManager.blockAt(editor.level, editor.mode, currentSelectedX, currentSelectedY);
-            if(block == 0xFF) { block = 0x00; }
-            else if(block == gLevelManager.highestBlockID(editor.level, editor.mode)) { block = 0x00; }
-            else { block++; }
-            gLevelManager.setBlockAt(editor.level, editor.mode, currentSelectedX, currentSelectedY, block);
-            return true;
-        }
-
-        if(key == SDLK_KP_2 || key == SDLK_LEFTBRACKET)
-        {
-            unsigned char block = gLevelManager.blockAt(editor.level, editor.mode, currentSelectedX, currentSelectedY);
-            if(block == 0x00) { block = gLevelManager.highestBlockID(editor.level, editor.mode); }
-            else { block--; }
-            gLevelManager.setBlockAt(editor.level, editor.mode, currentSelectedX, currentSelectedY, block);
-            return true;
-        }
-
-        if(key == SDLK_c)
-        {
-            gLevelManager.setBlockClipboard(
-                gLevelManager.blockAt(editor.level, editor.mode, currentSelectedX, currentSelectedY)
-            );
-            return true;
-        }
-
-        if(key == SDLK_v)
-        {
-            gLevelManager.setBlockAt(editor.level, editor.mode, currentSelectedX, currentSelectedY, gLevelManager.blockClipboard());
-            return true;
-        }
-
-        if(key == SDLK_KP_PLUS || key == SDLK_EQUALS)
-        {
-            unsigned short spx = (currentSelectedX * 4) + 1;
-            unsigned short spy = (currentSelectedY * 4) + 1;
-            gLevelManager.setSpawnPoint(editor.level, editor.mode, spx, spy);
-            return true;
-        }
-
-        if(key == SDLK_t)
-        {
-            unsigned short sbx = (currentSelectedX * 4);
-            unsigned short sby = (currentSelectedY * 4);
-            for(int tx = 0; tx < 4; ++tx)
-            {
-                for(int ty = 0; ty < 4; ++ty)
-                {
-                    short thing = gLevelManager.thingAt(editor.level, editor.mode, sbx + tx, sby + ty);
-                    if(thing >= 0) { printf("Thing found: %d\n", thing); }
-                    editor.thing = static_cast<unsigned short>(thing < 0 ? 0 : thing);
-                }
-            }
-            return true;
-        }
-    }
-
-    return true;
-}
-
 int Run(int argc, char **argv)
 {
     printf("blaster mapper v0.0.2\n");
@@ -249,49 +157,10 @@ int Run(int argc, char **argv)
         gRom.loadUSBTextures(el, 1);
     }
 
-    renderer.Render(editor);
-    window.swapBuffers();
-
-    bool running = true;
-    SDL_Event sdlEvent;
-
-    while(running)
-    {
-        while(SDL_PollEvent(&sdlEvent))
-        {
-            if(sdlEvent.type == SDL_QUIT)
-            {
-                running = false;
-                break;
-            }
-
-            if(sdlEvent.type == SDL_WINDOWEVENT)
-            {
-                if(sdlEvent.window.event == SDL_WINDOWEVENT_SIZE_CHANGED ||
-                   sdlEvent.window.event == SDL_WINDOWEVENT_RESIZED)
-                {
-                    window.resize(sdlEvent.window.data1, sdlEvent.window.data2);
-                    glViewport(0, 0, window.width(), window.height());
-                    renderer.Render(editor);
-                    window.swapBuffers();
-                }
-            }
-            else if(sdlEvent.type == SDL_KEYDOWN)
-            {
-                bool shouldContinue = HandleKeyPress(editor, sdlEvent.key.keysym.sym, renderer);
-                renderer.Render(editor);
-                window.swapBuffers();
-                if(!shouldContinue)
-                {
-                    running = false;
-                    break;
-                }
-            }
-        }
-
-        if(!running) { break; }
-        SDL_Delay(1);
-    }
+    Engine engine(window, renderer, editor, gRom);
+    auto inputService = std::make_unique<input::InputService>(editor, renderer, gRom);
+    engine.registerService(std::move(inputService));
+    engine.run();
 
     window.teardown();
 
