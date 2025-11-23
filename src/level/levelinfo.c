@@ -4,6 +4,12 @@
 #include "leveltypes.h"
 #include "levelinfo.h"
 
+Level Levels[8][2];
+unsigned char BlockClipboard = 0;
+GLuint darkenTextureID;
+GLuint spawnPointTextureID;
+GLuint thingSpawnTextureID;
+
 unsigned char GetHighestBlockID(int lvl, int lvlmode)
 {
 	if(lvl > 7 || lvl < 0) { return 0x00; }

@@ -7,9 +7,9 @@
 #include <GL/glx.h>
 #include <GL/glu.h>
 
-#include "../main.h"
+#include "../main.hpp"
 #include "loadrom.h"
-#include "../view/palette.h"
+#include "../view/Palette.hpp"
 //#include "leveltypes.h"
 
 bool LoadRom(char * romfile)

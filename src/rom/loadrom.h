@@ -6,8 +6,12 @@
 #include <stdlib.h>
 
 
-#include "../main.h"
+#include "../main.hpp"
 #include "../level/leveltypes.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 bool LoadRom(char * romfile);
 
@@ -28,5 +32,9 @@ FILE * RomFile;
 unsigned char RomHeader[16];
 unsigned char PrgRom[8][0x4000];
 unsigned char ChrRom[16][0x2000];
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

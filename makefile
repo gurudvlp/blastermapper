@@ -1,38 +1,34 @@
-OBJ = src/main.c \
-	src/rom/loadrom.c \
-	src/rom/saverom.c \
-	src/rom/rombuilder.c \
-	src/view/palette.c \
-	src/view/view_map.c \
-	src/view/view_quadrant.c \
-	src/view/view_screen.c \
-	src/view/view_block.c \
-	src/level/levelinfo.c \
-	src/level/thing.c
+TARGET := blastmap
+BUILD_DIR := build
 
-#	Any special libraries
-LIBS = -pthread -lX11 -lGL -lGLU -g -Wall
+CSRCS := $(sort $(shell find src -name '*.c'))
+CPPSRCS := $(sort $(shell find src -name '*.cpp'))
 
-#	Set any compiler flags
-#CFLAGS = -lrt
-CFLAGS = -std=gnu99 -fcommon
+COBJS := $(patsubst src/%.c,$(BUILD_DIR)/%.o,$(CSRCS))
+CXXOBJS := $(patsubst src/%.cpp,$(BUILD_DIR)/%.o,$(CPPSRCS))
 
-CC = gcc
+OBJS := $(COBJS) $(CXXOBJS)
 
-#	Set the filename extension
-EXTENSION = .c
+CC := gcc
+CXX := g++
+CFLAGS := -std=gnu99 -fcommon -g -Wall
+CXXFLAGS := -std=c++17 -fcommon -g -Wall
+LDLIBS := -pthread -lX11 -lGL -lGLU
 
-#define a rule that applies to all files ending in the .o suffix, which says that the .o file depends upon the .c version of the file and all the .h files included in the DEPS macro.  Compile each object file
-%.o: %$(EXTENSION) $(DEPS)
-	$(CC) -c -o $@ $< $(CFLAGS)
+.PHONY: all clean
 
-#Combine them into the output file
-#Set your desired exe output file name here
-blastmap: $(OBJ)
-	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+all: $(TARGET)
 
-#Cleanup
-.PHONY: clean
+$(TARGET): $(OBJS)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDLIBS)
+
+$(BUILD_DIR)/%.o: src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/%.o: src/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f *.o *~ core *~ 
+	rm -rf $(BUILD_DIR) $(TARGET)

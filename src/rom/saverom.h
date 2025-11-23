@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../main.h"
+#include "../main.hpp"
 
 //	The defined values for various sizes really shouldn't be altered.  There are
 //	very specific specs that need to be adhered to for NES ROMs.
@@ -42,6 +42,10 @@ typedef struct
 	unsigned short USBAttrSize;
 } SerializedMapInfo;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 bool SaveRom();
 void OutRomAddressToBytes(unsigned short addr, unsigned char * bytes);
 unsigned short BuildMapData(unsigned char * mapmeta, Level * level, unsigned char highblock, SerializedMapInfo * smi);
@@ -50,5 +54,9 @@ bool Merge(char * sourcerom, char * destrom, short bank);
 
 //	BuildMapPointers has been refactored as build_MapPointers
 //void BuildMapPointers(Level * level, unsigned short startloc, SerializedMapInfo * smi, unsigned char * outbuf);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

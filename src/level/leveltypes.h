@@ -7,11 +7,10 @@
 #include <GL/gl.h>
 #include <GL/glx.h>
 #include <GL/glu.h>
-//#include "main.h"
 
-typedef int bool;
-#define true 1
-#define false 0
+#ifndef __cplusplus
+#include <stdbool.h>
+#endif
 
 typedef unsigned char LevelType;
 #define LevelType_Tank 0x00
@@ -121,6 +120,6 @@ typedef struct
 	SpawnCoords SpawnPoint;
 } Level;
 
-Level Levels[8][2];
+extern Level Levels[8][2];
 
 #endif
