@@ -17,6 +17,7 @@
 #include "window/WindowService.hpp"
 #include "event/SDLEventService.hpp"
 #include "level/LevelInfo.hpp"
+#include "ui/UIService.hpp"
 
 extern "C" {
 bool SAVEROM_SHOW_LEVEL_POINTERS = false;
@@ -130,6 +131,9 @@ int Run(int argc, char **argv)
     auto sdlEventService =
         std::make_unique<event::SDLEventService>(engine.eventManager());
     engine.registerService(std::move(sdlEventService));
+    auto uiService =
+        std::make_unique<ui::UIService>(engine.eventManager());
+    engine.registerService(std::move(uiService));
     auto inputService =
         std::make_unique<input::InputService>(editor, gRom, engine.eventManager());
     engine.registerService(std::move(inputService));

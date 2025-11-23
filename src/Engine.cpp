@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <utility>
 
+#include "ui/UIService.hpp"
 #include "window/WindowService.hpp"
 
 namespace blastmap {
@@ -44,6 +45,10 @@ void Engine::run()
 void Engine::renderFrame()
 {
     m_renderer.Render(m_editor);
+    auto *uiService = getServiceAs<ui::UIService>(ui::UIService::kServiceName);
+    if(uiService) { uiService->render(); }
+
+    
 }
 
 void Engine::registerService(std::unique_ptr<IService> service)
