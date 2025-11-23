@@ -10,8 +10,12 @@ namespace {
 constexpr int kHotbarIconPadding = 8;
 }
 
-UIService::UIService(event::EventManager &eventManager)
+UIService::UIService(event::EventManager &eventManager,
+                     editor::State &editor,
+                     level::LevelManager &levelManager)
     : m_eventManager(eventManager)
+    , m_editor(editor)
+    , m_levelManager(levelManager)
 {
     auto addPanel = [this](const std::string &label, std::unique_ptr<UIPanel> panel) {
         if(!panel) { return; }
@@ -19,12 +23,14 @@ UIService::UIService(event::EventManager &eventManager)
         panels_.push_back(std::move(panel));
     };
 
-    addPanel("Blocks", std::make_unique<DummyPanel>("Block Explorer"));
+    addPanel("Blocks", std::make_unique<BlockPanel>(editor, levelManager));
     addPanel("Palette", std::make_unique<DummyPanel>("Palette"));
     addPanel("Things", std::make_unique<DummyPanel>("Thing Explorer"));
 
     m_eventManager.subscribe<event::MouseButtonEvent>(
         [this](const event::MouseButtonEvent &payload) { handleMouseButton(payload); });
+    m_eventManager.subscribe<event::MouseWheelEvent>(
+        [this](const event::MouseWheelEvent &payload) { handleMouseWheel(payload); });
 }
 
 void UIService::render()
@@ -116,6 +122,8 @@ void UIService::drawPanels(int width, int height)
 {
     if(panels_.empty()) { return; }
 
+    panelLayouts_.clear();
+
     const int margin = 16;
     int currentY = height - m_panelHeight - margin;
     int baseX = width - m_panelWidth - margin;
@@ -125,6 +133,7 @@ void UIService::drawPanels(int width, int height)
     {
         if(!panel->isOpen()) { continue; }
         panel->render(baseX, currentY, m_panelWidth, m_panelHeight);
+        panelLayouts_.push_back(PanelLayout{panel.get(), baseX, currentY, m_panelWidth, m_panelHeight});
         currentY -= (m_panelHeight + margin);
         if(currentY < margin) { break; }
     }
@@ -154,6 +163,43 @@ void UIService::handleMouseButton(const event::MouseButtonEvent &button)
     printf("Toggled: %s\n", hotbar_[index].panel->title().c_str());
     
     panel->toggle();
+}
+
+void UIService::handleMouseWheel(const event::MouseWheelEvent &event)
+{
+    int width = 0;
+    int height = 0;
+    if(!getWindowSize(width, height) || height == 0) { return; }
+
+    int mouseX = 0;
+    int mouseY = 0;
+    SDL_GetMouseState(&mouseX, &mouseY);
+    int yFromBottom = height - mouseY;
+
+    for(const auto &layout : panelLayouts_)
+    {
+        if(!layout.panel || !layout.panel->isOpen()) { continue; }
+        if(mouseX >= layout.x && mouseX <= layout.x + layout.width &&
+           yFromBottom >= layout.y && yFromBottom <= layout.y + layout.height)
+        {
+            layout.panel->onScroll(event.y);
+            break;
+        }
+    }
+}
+
+bool UIService::isPointOverPanel(int mouseX, int yFromBottom) const
+{
+    for(const auto &layout : panelLayouts_)
+    {
+        if(!layout.panel || !layout.panel->isOpen()) { continue; }
+        if(mouseX >= layout.x && mouseX <= layout.x + layout.width &&
+           yFromBottom >= layout.y && yFromBottom <= layout.y + layout.height)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool UIService::getWindowSize(int &width, int &height) const

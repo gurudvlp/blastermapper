@@ -23,6 +23,7 @@ public:
     void toggle() { open_ = !open_; }
 
     virtual void render(int originX, int originY, int panelWidth, int panelHeight) = 0;
+    virtual void onScroll(int delta) {}
 
 protected:
     std::string title_;

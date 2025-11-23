@@ -132,10 +132,12 @@ int Run(int argc, char **argv)
         std::make_unique<event::SDLEventService>(engine.eventManager());
     engine.registerService(std::move(sdlEventService));
     auto uiService =
-        std::make_unique<ui::UIService>(engine.eventManager());
+        std::make_unique<ui::UIService>(engine.eventManager(), editor, level::gLevelManager);
+    ui::UIService *uiServicePtr = uiService.get();
     engine.registerService(std::move(uiService));
     auto inputService =
         std::make_unique<input::InputService>(editor, gRom, engine.eventManager());
+    inputService->setUIService(uiServicePtr);
     engine.registerService(std::move(inputService));
     engine.run();
 

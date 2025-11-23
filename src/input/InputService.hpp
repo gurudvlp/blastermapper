@@ -15,6 +15,9 @@
 #include "../service/ServiceRegistry.hpp"
 
 namespace blastmap {
+namespace ui {
+class UIService;
+}
 namespace input {
 
 class InputService : public IService {
@@ -28,6 +31,8 @@ public:
     std::string serviceName() const override { return kServiceName; }
 
     bool tick() override;
+
+    void setUIService(ui::UIService *uiService) { m_uiService = uiService; }
 
 private:
     struct MonitoredKey
@@ -63,6 +68,7 @@ private:
     static constexpr float kZoomFactor = 1.15f;
     static constexpr float kMinZoom = 0.25f;
     static constexpr float kMaxZoom = 8.0f;
+    ui::UIService *m_uiService = nullptr;
 };
 
 } // namespace input

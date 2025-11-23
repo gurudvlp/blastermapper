@@ -1,5 +1,7 @@
 #include "InputService.hpp"
 
+#include "../ui/UIService.hpp"
+
 #include <cmath>
 
 namespace blastmap {
@@ -80,6 +82,12 @@ void InputService::onMouseWheel(const event::MouseWheelEvent &wheel)
     int mouseX = 0;
     int mouseY = 0;
     SDL_GetMouseState(&mouseX, &mouseY);
+
+    if(m_uiService)
+    {
+        int yFromBottom = height - mouseY;
+        if(m_uiService->isPointOverPanel(mouseX, yFromBottom)) { return; }
+    }
 
     float normX = screenToNormalizedX(mouseX, width);
     float normY = screenToNormalizedY(mouseY, height);
