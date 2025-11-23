@@ -11,7 +11,6 @@
 #include "Engine.hpp"
 #include "input/InputService.hpp"
 #include "editor/EditorState.hpp"
-#include "platform/Window.hpp"
 #include "rom/Rom.hpp"
 #include "view/EditorRenderer.hpp"
 #include "view/Palette.hpp"
@@ -19,6 +18,8 @@
 #include "view/ViewMap.hpp"
 #include "view/ViewQuadrant.hpp"
 #include "view/ViewScreen.hpp"
+#include "window/WindowService.hpp"
+#include "event/SDLEventService.hpp"
 #include "level/LevelInfo.hpp"
 
 extern "C" {
@@ -144,11 +145,11 @@ int Run(int argc, char **argv)
         return 0;
     }
 
-    platform::Window window;
-    if(!window.initialize()) { return 1; }
-    window.setupGL();
-
     view::EditorRenderer renderer;
+    Engine engine(renderer, editor);
+    auto windowService = std::make_unique<window::WindowService>(engine.eventManager());
+    if(!windowService->initialize()) { return 1; }
+    engine.registerService(std::move(windowService));
 
     printf("Creating textures from CHR ROM\n");
     for(int el = 0; el < 8; el++)
@@ -156,13 +157,13 @@ int Run(int argc, char **argv)
         gRom.loadUSBTextures(el, 0);
         gRom.loadUSBTextures(el, 1);
     }
-
-    Engine engine(window, renderer, editor, gRom);
-    auto inputService = std::make_unique<input::InputService>(editor, renderer, gRom);
+    auto sdlEventService =
+        std::make_unique<event::SDLEventService>(engine.eventManager());
+    engine.registerService(std::move(sdlEventService));
+    auto inputService =
+        std::make_unique<input::InputService>(editor, renderer, gRom, engine.eventManager());
     engine.registerService(std::move(inputService));
     engine.run();
-
-    window.teardown();
 
     return 0;
 }

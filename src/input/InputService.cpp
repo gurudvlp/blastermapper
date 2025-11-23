@@ -9,10 +9,14 @@ namespace blastmap {
 namespace input {
 using namespace level;
 
-InputService::InputService(editor::State &editor, view::EditorRenderer &renderer, rom::Rom &rom)
+InputService::InputService(editor::State &editor,
+                           view::EditorRenderer &renderer,
+                           rom::Rom &rom,
+                           event::EventManager &eventManager)
     : m_editor(editor)
     , m_renderer(renderer)
     , m_rom(rom)
+    , m_eventManager(eventManager)
 {
     std::fill(m_previousKeyState.begin(), m_previousKeyState.end(), 0);
     loadDefaultMappings();
@@ -31,6 +35,7 @@ bool InputService::tick()
         bool isDown = currentState[binding.scancode];
         if(isDown && !previouslyDown)
         {
+            m_eventManager.publish(event::KeyDownEvent{binding.key, binding.scancode});
             if(!handleKey(binding.key)) { return false; }
         }
         m_previousKeyState[binding.scancode] = static_cast<Uint8>(isDown);

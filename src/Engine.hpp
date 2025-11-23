@@ -7,8 +7,7 @@
 #include <string>
 
 #include "editor/EditorState.hpp"
-#include "platform/Window.hpp"
-#include "rom/Rom.hpp"
+#include "event/EventManager.hpp"
 #include "service/ServiceRegistry.hpp"
 #include "view/EditorRenderer.hpp"
 
@@ -16,10 +15,12 @@ namespace blastmap {
 
 class Engine {
 public:
-    Engine(platform::Window &window, view::EditorRenderer &renderer, editor::State &editor, rom::Rom &rom);
+    Engine(view::EditorRenderer &renderer, editor::State &editor);
 
     void run();
     void registerService(std::unique_ptr<IService> service);
+    event::EventManager &eventManager() { return m_eventManager; }
+    const event::EventManager &eventManager() const { return m_eventManager; }
 
     template<typename T>
     T *getServiceAs(const std::string &serviceName)
@@ -29,13 +30,11 @@ public:
 
 private:
     void renderFrame();
-    bool handleWindowEvent(const SDL_Event &event);
 
-    platform::Window &m_window;
     view::EditorRenderer &m_renderer;
     editor::State &m_editor;
-    rom::Rom &m_rom;
     ServiceRegistry m_serviceRegistry;
+    event::EventManager m_eventManager;
 };
 
 } // namespace blastmap

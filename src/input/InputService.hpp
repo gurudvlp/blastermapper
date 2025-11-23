@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "../editor/EditorState.hpp"
+#include "../event/EventManager.hpp"
 #include "../rom/Rom.hpp"
 #include "../service/ServiceRegistry.hpp"
 #include "../view/EditorRenderer.hpp"
@@ -19,7 +20,10 @@ class InputService : public IService {
 public:
     static constexpr const char *kServiceName = "InputService";
 
-    InputService(editor::State &editor, view::EditorRenderer &renderer, rom::Rom &rom);
+    InputService(editor::State &editor,
+                 view::EditorRenderer &renderer,
+                 rom::Rom &rom,
+                 event::EventManager &eventManager);
 
     std::string serviceName() const override { return kServiceName; }
 
@@ -45,6 +49,7 @@ private:
     std::unordered_map<std::string, SDL_Keycode> m_keyBindings;
     std::vector<MonitoredKey> m_monitoredKeys;
     std::array<Uint8, SDL_NUM_SCANCODES> m_previousKeyState{};
+    event::EventManager &m_eventManager;
 };
 
 } // namespace input
